@@ -13,7 +13,7 @@ export default function Layout({ children }: LayoutProps) {
           Chamble
         </Link>
         <nav className="layout__nav">
-          <Link to="/lobby">Lobby</Link>
+          <Link to="/home">Home</Link>
         </nav>
       </header>
       <main className="layout__main">{children}</main>

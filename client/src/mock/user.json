@@ -1,0 +1,9 @@
+{
+  "id": "user-001",
+  "displayName": "Avery Kim",
+  "email": "avery@chamble.test",
+  "rating": 1420,
+  "gamesPlayed": 18,
+  "wins": 10,
+  "losses": 8
+}

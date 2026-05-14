@@ -52,9 +52,158 @@ body {
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.08);
 }
 
+.panel--wide {
+  width: min(860px, 94vw);
+}
+
 .stack {
   display: grid;
   gap: 1rem;
+}
+
+.home__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.home__meta {
+  text-align: right;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.home__id {
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.home__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  background: #f7f4ef;
+  border-radius: 14px;
+  padding: 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.stats {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.stats__item {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.stats__label {
+  color: #5b5b5b;
+  font-weight: 500;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.list__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #e0ded9;
+}
+
+.badge--online {
+  background: #c9f0d4;
+}
+
+.badge--offline {
+  background: #e9e0db;
+}
+
+.badge--in-game {
+  background: #f6e1b2;
+}
+
+.modes {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.setup {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(240px, 320px);
+  gap: 2rem;
+  align-items: start;
+  margin-top: 1.5rem;
+}
+
+.board-placeholder {
+  background: #efe9e0;
+  border-radius: 12px;
+  padding: 1rem;
+  min-height: 280px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed #c9b8a4;
+}
+
+.board-placeholder__inner {
+  color: #6e5d49;
+  font-weight: 600;
+}
+
+.code-card {
+  display: grid;
+  gap: 0.3rem;
+  background: #111a22;
+  color: #f4f1ec;
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  font-size: 0.95rem;
+}
+
+.code-card strong {
+  font-size: 1.2rem;
+  letter-spacing: 0.2em;
+}
+
+.error {
+  color: #9b2c2c;
+  background: #fbe7e7;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  margin-top: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+
+.status {
+  color: #1f4b2e;
+  background: #def5e5;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  margin-top: 0.8rem;
+  margin-bottom: 0.8rem;
 }
 
 .field {
@@ -80,6 +229,11 @@ body {
   color: #111a22;
   font-weight: 600;
   cursor: pointer;
+}
+
+.button--ghost {
+  background: #f1e5d0;
+  color: #7a5a20;
 }
 
 .button:disabled {

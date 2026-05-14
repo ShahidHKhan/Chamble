@@ -2,6 +2,8 @@ export type PlayerColor = "white" | "black";
 
 export type RoomPlayer = {
   id: string;
+  socketId: string;
+  displayName: string;
   color: PlayerColor;
 };
 
