@@ -1,11 +1,18 @@
+import { Chess } from "chess.js";
 import { RoomPlayer, RoomState } from "./types";
 
 const rooms = new Map<string, RoomState>();
 
 export function createRoom(code: string) {
+  const chess = new Chess();
   const state: RoomState = {
     code,
     players: [],
+    chess,
+    fen: chess.fen(),
+    turn: "white",
+    phase: "CHESS",
+    moveHistory: [],
     createdAt: Date.now()
   };
   rooms.set(code, state);
@@ -48,4 +55,25 @@ export function removePlayerFromRoom(code: string, socketId: string) {
 
 export function getRoomPlayers(code: string) {
   return rooms.get(code)?.players ?? [];
+}
+
+export function getRoomSnapshot(code: string) {
+  const room = rooms.get(code);
+  if (!room) {
+    return null;
+  }
+
+  return {
+    roomCode: room.code,
+    fen: room.fen,
+    turn: room.turn,
+    phase: room.phase,
+    players: room.players.map((player) => ({
+      id: player.id,
+      displayName: player.displayName
+    })),
+    lastMove: room.lastMove,
+    moveHistory: room.moveHistory,
+    createdAt: room.createdAt
+  };
 }
