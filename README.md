@@ -1,25 +1,23 @@
 # Chamble
-Recreation of Chess21.
+Chess + gambling game modes (for example, chess + blackjack). This repo sets up the foundation for a realtime, event-driven game platform.
 
-## Scaffold
+## Stack (simple view)
 
-- client: Vite + React + TypeScript
-- server: Express + Socket.IO
-- shared types are duplicated in client/server for now
+- React + chess.js: UI and rules on the client for instant moves
+- Socket.IO: realtime messenger between players (no storage)
+- Redis: live game state and matchmaking queue
+- Supabase (Postgres + Auth): permanent records when games finish or users change
 
-## Quick Start
+## How data flows
 
-1) Install dependencies in each workspace
-2) Run both dev servers
+1) Client validates and renders moves instantly.
+2) Socket.IO relays events between players and the server.
+3) Redis holds only active, in-progress game state.
+4) Supabase stores completed games, users, stats, and ratings.
 
-```
-npm install
-npm run dev
-```
+## Repo structure
 
-## Scripts
-
-- `npm run dev` runs client + server
-- `npm run dev:client` runs the Vite client only
-- `npm run dev:server` runs the Socket.IO server only
-- `npm run typecheck` runs both type checks
+- client: React app
+- server: Node.js + Express + Socket.IO
+- shared: shared types, constants, and utilities
+- infra: deployment and service configs (Redis, Supabase, etc.)
