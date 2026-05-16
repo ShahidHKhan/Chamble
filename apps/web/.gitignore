@@ -1,3 +1,10 @@
+## Web-specific ignores
+# Vite
+dist/
+.vite/
+
+# Local env (already in root but explicit here too)
+.env.local
 # Logs
 logs
 *.log

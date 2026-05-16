@@ -1,6 +1,7 @@
 {
   "name": "chess-app",
   "private": true,
+  "packageManager": "pnpm@11.1.2",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",

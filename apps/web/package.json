@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@chess/shared": "workspace:*",
     "@supabase/supabase-js": "^2.105.4",
     "chess.js": "^1.4.0",
     "react": "^19.2.6",

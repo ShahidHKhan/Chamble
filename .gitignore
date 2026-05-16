@@ -1,1 +1,30 @@
-node_modules
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.turbo/
+
+# Environment files — NEVER commit these
+.env
+.env.local
+.env.*.local
+
+# Supabase local (runtime data, not config)
+supabase/.temp/
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
