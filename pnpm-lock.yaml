@@ -14,6 +14,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@chess/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@supabase/supabase-js':
         specifier: ^2.105.4
         version: 2.105.4
@@ -51,6 +54,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@chess/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@supabase/supabase-js':
         specifier: ^2.105.4
         version: 2.105.4
