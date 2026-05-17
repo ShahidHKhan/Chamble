@@ -1,0 +1,87 @@
+import { handValue, type Card, type BlackjackPhase, type BlackjackResult } from '../hooks/useBlackjack'
+
+interface Props {
+  phase: BlackjackPhase
+  playerHand: Card[]
+  dealerHand: Card[]
+  result: BlackjackResult | null
+  attackerLabel: string
+  defenderLabel: string
+  onHit: () => void
+  onStand: () => void
+  onContinue: () => void
+}
+
+function CardDisplay({ card }: { card: Card }) {
+  if (card.faceDown) return <div className="bj-card bj-card--facedown">?</div>
+  const isRed = card.suit === '♥' || card.suit === '♦'
+  return (
+    <div className={`bj-card${isRed ? ' bj-card--red' : ''}`}>
+      <span className="bj-card__rank">{card.rank}</span>
+      <span className="bj-card__suit">{card.suit}</span>
+    </div>
+  )
+}
+
+const RESULT_TEXT: Record<BlackjackResult, string> = {
+  win:  'You win — capture succeeds!',
+  lose: 'Dealer wins — your piece is taken!',
+  push: 'Push — no capture, turn passes.',
+}
+
+const RESULT_CLASS: Record<BlackjackResult, string> = {
+  win:  'bj-result--win',
+  lose: 'bj-result--lose',
+  push: 'bj-result--push',
+}
+
+export function BlackjackTable({ phase, playerHand, dealerHand, result, attackerLabel, defenderLabel, onHit, onStand, onContinue }: Props) {
+  if (phase === 'idle') return null
+
+  const playerTotal = handValue(playerHand)
+  const shownDealer = dealerHand.filter(c => !c.faceDown)
+  const dealerDisplay = phase === 'player-turn'
+    ? `${handValue(shownDealer)}+`
+    : `${handValue(dealerHand)}`
+
+  return (
+    <div className="bj-table">
+      <div className="bj-header">
+        <span className="bj-header__title">Capture Battle</span>
+        <span className="bj-header__sub">{attackerLabel} attacks {defenderLabel}</span>
+      </div>
+
+      <div className="bj-section">
+        <div className="bj-section__label">Dealer &bull; {dealerDisplay}</div>
+        <div className="bj-hand">
+          {dealerHand.map((card, i) => <CardDisplay key={i} card={card} />)}
+        </div>
+      </div>
+
+      <div className="bj-divider" />
+
+      <div className="bj-section">
+        <div className="bj-section__label">You &bull; {playerTotal}</div>
+        <div className="bj-hand">
+          {playerHand.map((card, i) => <CardDisplay key={i} card={card} />)}
+        </div>
+      </div>
+
+      {phase === 'player-turn' && (
+        <div className="bj-actions">
+          <button className="btn btn--primary" onClick={onHit}>Hit</button>
+          <button className="btn btn--secondary" onClick={onStand}>Stand</button>
+        </div>
+      )}
+
+      {phase === 'resolved' && result && (
+        <div className="bj-resolved">
+          <div className={`bj-result-text ${RESULT_CLASS[result]}`}>
+            {RESULT_TEXT[result]}
+          </div>
+          <button className="btn btn--primary btn--full" onClick={onContinue}>Continue</button>
+        </div>
+      )}
+    </div>
+  )
+}

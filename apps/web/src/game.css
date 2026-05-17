@@ -419,6 +419,209 @@
   font-style: italic;
 }
 
+/* ── Blackjack table ── */
+.bj-table {
+  background: var(--code-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bj-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bj-header__title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.bj-header__sub {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.bj-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bj-section__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+.bj-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bj-card {
+  width: 42px;
+  height: 58px;
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  background: #fff;
+  color: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--mono);
+  line-height: 1.2;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.bj-card--red {
+  color: #c0392b;
+}
+
+.bj-card--facedown {
+  background: #2a3a5c;
+  color: #6b8cba;
+  border-color: #3a4f78;
+  font-size: 18px;
+}
+
+.bj-card__rank {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.bj-card__suit {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.bj-divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.bj-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.bj-resolved {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bj-result-text {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.bj-result--win {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.bj-result--lose {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.bj-result--push {
+  background: rgba(234, 179, 8, 0.12);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+/* Blackjack board overlay */
+.board-pause-overlay--bj {
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--accent);
+}
+
+/* ── Promotion dialog ── */
+.promotion-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  z-index: 10;
+}
+
+.promotion-dialog {
+  background: var(--code-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.promotion-dialog__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+  text-align: center;
+}
+
+.promotion-dialog__options {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.promotion-dialog__btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.promotion-dialog__btn:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+/* Status badge for blackjack */
+.game-status--bj {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  font-style: italic;
+}
+
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .game-main {

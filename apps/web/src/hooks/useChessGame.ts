@@ -115,5 +115,49 @@ export function useChessGame(mode: GameMode, paused = false) {
 
   const isPlayerTurn = mode === 'local' || snapshot.turn === 'w'
 
-  return { snapshot, makeMove, resign, timeout, reset, isPlayerTurn }
+  const isPawnPromotion = useCallback((from: Square, to: Square): boolean => {
+    const piece = chessRef.current.get(from)
+    if (!piece || piece.type !== 'p') return false
+    const toRank = to[1]
+    if (!((piece.color === 'w' && toRank === '8') || (piece.color === 'b' && toRank === '1'))) return false
+    const legal = chessRef.current.moves({ verbose: true }) as Move[]
+    return legal.some(m => m.from === from && m.to === to && m.promotion)
+  }, [])
+
+  const isCapture = useCallback((from: Square, to: Square): boolean => {
+    const source = chessRef.current.get(from)
+    const target = chessRef.current.get(to)
+    return !!(source && target && source.color !== target.color)
+  }, [])
+
+  // Attacker loses blackjack: remove attacker's piece, keep defender in place, switch turns
+  const captureReversed = useCallback((from: Square) => {
+    const chess = chessRef.current
+    chess.remove(from)
+    const parts = chess.fen().split(' ')
+    const wasTurn = parts[1] as Color
+    parts[1] = wasTurn === 'w' ? 'b' : 'w'
+    parts[3] = '-'
+    parts[4] = '0'
+    if (wasTurn === 'b') parts[5] = String(parseInt(parts[5]) + 1)
+    chess.load(parts.join(' '))
+    const { status, winner } = resolveStatus(chess)
+    setSnapshot(buildSnapshot(chess, status, winner, null))
+  }, [])
+
+  // Push: no pieces move, just switch turns
+  const cancelCapture = useCallback(() => {
+    const chess = chessRef.current
+    const parts = chess.fen().split(' ')
+    const wasTurn = parts[1] as Color
+    parts[1] = wasTurn === 'w' ? 'b' : 'w'
+    parts[3] = '-'
+    parts[4] = String(parseInt(parts[4]) + 1)
+    if (wasTurn === 'b') parts[5] = String(parseInt(parts[5]) + 1)
+    chess.load(parts.join(' '))
+    const { status, winner } = resolveStatus(chess)
+    setSnapshot(buildSnapshot(chess, status, winner, null))
+  }, [])
+
+  return { snapshot, makeMove, resign, timeout, reset, isPlayerTurn, isPawnPromotion, isCapture, captureReversed, cancelCapture }
 }
