@@ -39,8 +39,8 @@
   align-items: stretch;
   gap: 8px;
   flex-shrink: 0;
-  /* Constrain by available width (minus sidebar+gap+padding) AND height (minus header+bars+padding) */
-  width: min(500px, calc(100vw - 360px), calc(100vh - 220px));
+  /* Constrain by available width (minus both panels + gaps + padding) AND height */
+  width: min(500px, calc(100vw - 680px), calc(100vh - 220px));
 }
 
 @media (max-width: 900px) {
@@ -419,6 +419,19 @@
   font-style: italic;
 }
 
+/* ── Blackjack left panel ── */
+.bj-panel {
+  width: 280px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  transition: opacity 0.3s;
+}
+
+.bj-panel--idle {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
 /* ── Blackjack table ── */
 .bj-table {
   background: var(--code-bg);
@@ -509,6 +522,19 @@
 .bj-card__suit {
   font-size: 14px;
   line-height: 1;
+}
+
+.bj-thinking {
+  font-style: italic;
+  opacity: 0.6;
+  font-size: 10px;
+  margin-left: 4px;
+  animation: bj-blink 0.8s ease-in-out infinite;
+}
+
+@keyframes bj-blink {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 0.2; }
 }
 
 .bj-divider {
@@ -623,6 +649,12 @@
 }
 
 /* ── Responsive ── */
+@media (max-width: 1100px) {
+  .board-section {
+    width: min(500px, calc(100vw - 360px), calc(100vh - 220px));
+  }
+}
+
 @media (max-width: 900px) {
   .game-main {
     flex-direction: column;
@@ -631,9 +663,18 @@
     gap: 16px;
   }
 
+  .bj-panel {
+    width: 100%;
+    max-width: 560px;
+  }
+
   .game-sidebar {
     width: 100%;
     max-width: 560px;
+  }
+
+  .board-section {
+    width: min(500px, calc(100vw - 32px));
   }
 
   .game-header {

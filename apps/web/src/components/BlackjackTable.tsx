@@ -9,7 +9,6 @@ interface Props {
   defenderLabel: string
   onHit: () => void
   onStand: () => void
-  onContinue: () => void
 }
 
 function CardDisplay({ card }: { card: Card }) {
@@ -35,8 +34,28 @@ const RESULT_CLASS: Record<BlackjackResult, string> = {
   push: 'bj-result--push',
 }
 
-export function BlackjackTable({ phase, playerHand, dealerHand, result, attackerLabel, defenderLabel, onHit, onStand, onContinue }: Props) {
-  if (phase === 'idle') return null
+const IDLE_CARD = <div className="bj-card bj-card--facedown">?</div>
+
+export function BlackjackTable({ phase, playerHand, dealerHand, result, attackerLabel, defenderLabel, onHit, onStand }: Props) {
+  if (phase === 'idle') {
+    return (
+      <div className="bj-table">
+        <div className="bj-header">
+          <span className="bj-header__title">Capture Battle</span>
+          <span className="bj-header__sub">Attempt a capture to activate</span>
+        </div>
+        <div className="bj-section">
+          <div className="bj-section__label">Dealer</div>
+          <div className="bj-hand">{IDLE_CARD}{IDLE_CARD}</div>
+        </div>
+        <div className="bj-divider" />
+        <div className="bj-section">
+          <div className="bj-section__label">You</div>
+          <div className="bj-hand">{IDLE_CARD}{IDLE_CARD}</div>
+        </div>
+      </div>
+    )
+  }
 
   const playerTotal = handValue(playerHand)
   const shownDealer = dealerHand.filter(c => !c.faceDown)
@@ -52,7 +71,10 @@ export function BlackjackTable({ phase, playerHand, dealerHand, result, attacker
       </div>
 
       <div className="bj-section">
-        <div className="bj-section__label">Dealer &bull; {dealerDisplay}</div>
+        <div className="bj-section__label">
+          Dealer &bull; {dealerDisplay}
+          {phase === 'dealer-turn' && <span className="bj-thinking"> drawing…</span>}
+        </div>
         <div className="bj-hand">
           {dealerHand.map((card, i) => <CardDisplay key={i} card={card} />)}
         </div>
@@ -75,11 +97,8 @@ export function BlackjackTable({ phase, playerHand, dealerHand, result, attacker
       )}
 
       {phase === 'resolved' && result && (
-        <div className="bj-resolved">
-          <div className={`bj-result-text ${RESULT_CLASS[result]}`}>
-            {RESULT_TEXT[result]}
-          </div>
-          <button className="btn btn--primary btn--full" onClick={onContinue}>Continue</button>
+        <div className={`bj-result-text ${RESULT_CLASS[result]}`}>
+          {RESULT_TEXT[result]}
         </div>
       )}
     </div>

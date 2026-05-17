@@ -130,6 +130,11 @@ export function useChessGame(mode: GameMode, paused = false) {
     return !!(source && target && source.color !== target.color)
   }, [])
 
+  const legalMovesFrom = useCallback((square: Square): Square[] => {
+    if (statusRef.current !== 'playing') return []
+    return (chessRef.current.moves({ square, verbose: true }) as Move[]).map(m => m.to as Square)
+  }, [])
+
   // Attacker loses blackjack: remove attacker's piece, keep defender in place, switch turns
   const captureReversed = useCallback((from: Square) => {
     const chess = chessRef.current
@@ -159,5 +164,5 @@ export function useChessGame(mode: GameMode, paused = false) {
     setSnapshot(buildSnapshot(chess, status, winner, null))
   }, [])
 
-  return { snapshot, makeMove, resign, timeout, reset, isPlayerTurn, isPawnPromotion, isCapture, captureReversed, cancelCapture }
+  return { snapshot, makeMove, resign, timeout, reset, isPlayerTurn, isPawnPromotion, isCapture, legalMovesFrom, captureReversed, cancelCapture }
 }

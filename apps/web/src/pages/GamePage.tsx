@@ -11,7 +11,8 @@ import { GameControls, type PauseState } from '../components/GameControls'
 import { BlackjackTable } from '../components/BlackjackTable'
 import '../game.css'
 
-type PieceDropArgs = { sourceSquare: string; targetSquare: string | null }
+type PieceDropArgs  = { sourceSquare: string; targetSquare: string | null }
+type SquareClickArgs = { square: string }
 
 const PROMOTION_PIECES: { symbol: string; piece: PieceSymbol; label: string }[] = [
   { symbol: '♕', piece: 'q', label: 'Queen'  },
@@ -27,7 +28,7 @@ const PROMOTION_PIECES_BLACK: typeof PROMOTION_PIECES = [
 ]
 
 function statusMessage(snapshot: GameSnapshot, mode: GameMode, pauseState: PauseState, bjActive: boolean): string {
-  if (bjActive) return 'Blackjack in progress...'
+  if (bjActive) return 'Blackjack in progress…'
   if (pauseState === 'paused') return 'Game paused'
   const { status, winner, turn, isCheck } = snapshot
   const winnerName = winner === 'w' ? 'White' : winner === 'b' ? 'Black' : null
@@ -57,17 +58,25 @@ export function GamePage() {
   const [pauseOfferedBy, setPauseOfferedBy] = useState<'w' | 'b' | null>(null)
   const isPaused = pauseState === 'paused'
 
-  const [pendingPromo, setPendingPromo]   = useState<{ from: Square; to: Square } | null>(null)
+  const [pendingPromo,   setPendingPromo]   = useState<{ from: Square; to: Square } | null>(null)
   const [pendingCapture, setPendingCapture] = useState<{ from: Square; to: Square } | null>(null)
-  const [captureLabels, setCaptureLabels]   = useState({ attacker: '', defender: '' })
+  const [captureLabels,  setCaptureLabels]  = useState({ attacker: '', defender: '' })
 
-  const { snapshot, makeMove, resign, timeout, isPlayerTurn, isPawnPromotion, isCapture, captureReversed, cancelCapture } = useChessGame(mode, isPaused)
+  // Click-to-move state
+  const [selectedSquare,  setSelectedSquare]  = useState<Square | null>(null)
+  const [moveHighlights,  setMoveHighlights]  = useState<Record<string, React.CSSProperties>>({})
+
+  const {
+    snapshot, makeMove, resign, timeout, isPlayerTurn,
+    isPawnPromotion, isCapture, legalMovesFrom, captureReversed, cancelCapture,
+  } = useChessGame(mode, isPaused)
   const { times, active, setActive, isExpired, expiredColor } = useClock(600_000)
   const bj = useBlackjack()
 
-  const bjActive = bj.phase !== 'idle'
+  const bjActive   = bj.phase !== 'idle'
+  const isGameOver = snapshot.status !== 'playing'
 
-  // Read container width via ResizeObserver
+  // Resize observer
   useEffect(() => {
     const el = boardContainerRef.current
     if (!el) return
@@ -76,95 +85,118 @@ export function GamePage() {
     return () => ro.disconnect()
   }, [])
 
-  // Clock: start for white immediately; switch on each move; stop on game over, pause, or blackjack
+  // Clock
   useEffect(() => {
-    if (snapshot.status !== 'playing' || isPaused || bjActive) {
-      setActive(null)
-      return
-    }
+    if (snapshot.status !== 'playing' || isPaused || bjActive) { setActive(null); return }
     setActive(snapshot.turn)
   }, [snapshot.turn, snapshot.status, isPaused, bjActive, setActive])
 
   // Timeout
   useEffect(() => {
-    if (isExpired && expiredColor && snapshot.status === 'playing') {
-      setActive(null)
-      timeout(expiredColor)
-    }
+    if (isExpired && expiredColor && snapshot.status === 'playing') { setActive(null); timeout(expiredColor) }
   }, [isExpired, expiredColor, snapshot.status, timeout, setActive])
 
-  // Reset pause when game ends
+  // Reset pause on game end
   useEffect(() => {
-    if (snapshot.status !== 'playing') {
-      setPauseState('none')
-      setPauseOfferedBy(null)
-    }
+    if (snapshot.status !== 'playing') { setPauseState('none'); setPauseOfferedBy(null) }
   }, [snapshot.status])
 
-  const handlePause = useCallback(() => {
-    if (mode === 'computer') {
-      setActive(null)
-      setPauseState('paused')
-    } else {
-      setPauseOfferedBy(snapshot.turn)
-      setPauseState('offered')
-    }
-  }, [mode, snapshot.turn, setActive])
+  // Clear selection whenever the turn changes or game ends
+  useEffect(() => {
+    setSelectedSquare(null)
+    setMoveHighlights({})
+  }, [snapshot.turn, snapshot.status])
 
+  // Auto-apply blackjack result 1.5 s after resolved
+  useEffect(() => {
+    if (bj.phase !== 'resolved' || !pendingCapture || bj.result === null) return
+    const { from, to } = pendingCapture
+    const result = bj.result
+    const timer = setTimeout(() => {
+      setPendingCapture(null)
+      bj.reset()
+      if (result === 'win')       makeMove(from, to, 'q')
+      else if (result === 'lose') captureReversed(from)
+      else                        cancelCapture()
+    }, 1500)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bj.phase, bj.result, pendingCapture])
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  const triggerCapture = useCallback((from: Square, to: Square) => {
+    const colorName = (c: 'w' | 'b') => c === 'w' ? 'White' : 'Black'
+    setCaptureLabels({
+      attacker: `${colorName(snapshot.turn)}'s piece`,
+      defender: `${colorName(snapshot.turn === 'w' ? 'b' : 'w')}'s piece`,
+    })
+    setPendingCapture({ from, to })
+    bj.deal()
+  }, [snapshot.turn, bj])
+
+  // ── Event handlers ─────────────────────────────────────────────────────────
+
+  const handlePause        = useCallback(() => {
+    if (mode === 'computer') { setActive(null); setPauseState('paused') }
+    else { setPauseOfferedBy(snapshot.turn); setPauseState('offered') }
+  }, [mode, snapshot.turn, setActive])
   const handleAcceptPause  = useCallback(() => { setActive(null); setPauseState('paused') }, [setActive])
   const handleDeclinePause = useCallback(() => { setPauseState('none'); setPauseOfferedBy(null) }, [])
   const handleResume       = useCallback(() => {
-    setPauseState('none')
-    setPauseOfferedBy(null)
+    setPauseState('none'); setPauseOfferedBy(null)
     if (snapshot.status === 'playing') setActive(snapshot.turn)
   }, [snapshot.status, snapshot.turn, setActive])
 
+  // Drag-to-move
   const handlePieceDrop = useCallback(({ sourceSquare, targetSquare }: PieceDropArgs): boolean => {
     if (!isPlayerTurn || isPaused || bjActive || !targetSquare) return false
     const from = sourceSquare as Square
     const to   = targetSquare as Square
-
-    // Capture → trigger blackjack
-    if (isCapture(from, to)) {
-      // Build human-readable labels for the table
-      // We can't call chess.get() directly here, but isCapture already verified both pieces exist
-      setPendingCapture({ from, to })
-      // Labels will be set from snapshot data in a useEffect or inline
-      const turn = snapshot.turn
-      const colorName = (c: 'w' | 'b') => c === 'w' ? 'White' : 'Black'
-      // Parse piece types from FEN is complex; pass simple labels
-      setCaptureLabels({
-        attacker: `${colorName(turn)}'s piece`,
-        defender: `${colorName(turn === 'w' ? 'b' : 'w')}'s piece`,
-      })
-      bj.deal()
-      return false
-    }
-
-    // Non-capture pawn promotion → show piece picker
-    if (isPawnPromotion(from, to)) {
-      setPendingPromo({ from, to })
-      return false
-    }
-
+    if (isCapture(from, to))      { triggerCapture(from, to); return false }
+    if (isPawnPromotion(from, to)) { setPendingPromo({ from, to }); return false }
     return makeMove(from, to)
-  }, [makeMove, isPlayerTurn, isPaused, bjActive, isPawnPromotion, isCapture, snapshot.turn, bj])
+  }, [makeMove, isPlayerTurn, isPaused, bjActive, isPawnPromotion, isCapture, triggerCapture])
 
-  // Apply blackjack outcome to the chess board
-  const handleBJContinue = useCallback(() => {
-    if (!pendingCapture || bj.result === null) return
-    const { from, to } = pendingCapture
-    setPendingCapture(null)
-    bj.reset()
+  // Click-to-move
+  const handleSquareClick = useCallback(({ square }: SquareClickArgs) => {
+    if (!isPlayerTurn || isPaused || bjActive || isGameOver) return
+    const sq = square as Square
 
-    if (bj.result === 'win') {
-      makeMove(from, to, 'q') // auto-queen if capture-promotion
-    } else if (bj.result === 'lose') {
-      captureReversed(from)
-    } else {
-      cancelCapture()
+    // Clicking the already-selected piece deselects it
+    if (selectedSquare === sq) {
+      setSelectedSquare(null); setMoveHighlights({}); return
     }
-  }, [pendingCapture, bj, makeMove, captureReversed, cancelCapture])
+
+    // Clicking a highlighted target executes the move
+    if (selectedSquare && moveHighlights[sq]) {
+      const from = selectedSquare
+      const to   = sq
+      setSelectedSquare(null); setMoveHighlights({})
+      if (isCapture(from, to))       { triggerCapture(from, to); return }
+      if (isPawnPromotion(from, to)) { setPendingPromo({ from, to }); return }
+      makeMove(from, to)
+      return
+    }
+
+    // Select a piece and show its legal moves
+    const targets = legalMovesFrom(sq)
+    if (targets.length === 0) { setSelectedSquare(null); setMoveHighlights({}); return }
+
+    setSelectedSquare(sq)
+    const highlights: Record<string, React.CSSProperties> = {
+      [sq]: { backgroundColor: 'rgba(20, 85, 255, 0.25)' },
+    }
+    for (const t of targets) {
+      highlights[t] = isCapture(sq, t)
+        ? { backgroundColor: 'rgba(0, 200, 120, 0.3)' }
+        : { background: 'radial-gradient(circle, rgba(0,0,0,0.18) 28%, transparent 28%)' }
+    }
+    setMoveHighlights(highlights)
+  }, [
+    selectedSquare, moveHighlights, isPlayerTurn, isPaused, bjActive, isGameOver,
+    legalMovesFrom, isCapture, isPawnPromotion, makeMove, triggerCapture,
+  ])
 
   const handlePromotion = useCallback((piece: PieceSymbol) => {
     if (!pendingPromo) return
@@ -172,22 +204,18 @@ export function GamePage() {
     setPendingPromo(null)
   }, [pendingPromo, makeMove])
 
-  const lastMoveSquares = snapshot.lastMove
-    ? {
-        [snapshot.lastMove.from]: { backgroundColor: 'rgba(255, 255, 0, 0.35)' },
-        [snapshot.lastMove.to]:   { backgroundColor: 'rgba(255, 255, 0, 0.5)'  },
-      }
-    : {}
+  // ── Derived styles ─────────────────────────────────────────────────────────
 
-  const isGameOver = snapshot.status !== 'playing'
+  const squareStyles = { ...lastMoveHighlights(snapshot), ...moveHighlights }
+
   const boardLocked = !isPlayerTurn || isGameOver || isPaused || !!pendingPromo || bjActive
 
   const msgClass = [
     'game-status',
-    isGameOver                                             ? 'game-status--over'  : '',
-    isPaused                                               ? 'game-status--paused' : '',
-    bjActive                                               ? 'game-status--bj'    : '',
-    snapshot.isCheck && !isGameOver && !isPaused && !bjActive ? 'game-status--check'  : '',
+    isGameOver                                                 ? 'game-status--over'   : '',
+    isPaused                                                   ? 'game-status--paused' : '',
+    bjActive                                                   ? 'game-status--bj'     : '',
+    snapshot.isCheck && !isGameOver && !isPaused && !bjActive  ? 'game-status--check'  : '',
   ].filter(Boolean).join(' ')
 
   const promoOptions = snapshot.turn === 'w' ? PROMOTION_PIECES : PROMOTION_PIECES_BLACK
@@ -199,6 +227,22 @@ export function GamePage() {
       </header>
 
       <main className="game-main">
+
+        {/* Blackjack panel — always visible on the left, dimmed when idle */}
+        <div className={`bj-panel${bjActive ? '' : ' bj-panel--idle'}`}>
+          <BlackjackTable
+            phase={bj.phase}
+            playerHand={bj.playerHand}
+            dealerHand={bj.dealerHand}
+            result={bj.result}
+            attackerLabel={captureLabels.attacker}
+            defenderLabel={captureLabels.defender}
+            onHit={bj.hit}
+            onStand={bj.stand}
+          />
+        </div>
+
+        {/* Chessboard */}
         <div className="board-section" ref={boardContainerRef}>
           <PlayerBar
             color="b"
@@ -213,19 +257,16 @@ export function GamePage() {
               options={{
                 position: snapshot.fen,
                 onPieceDrop: handlePieceDrop,
+                onSquareClick: handleSquareClick,
                 boardStyle: { width: boardWidth, height: boardWidth },
                 allowDragging: !boardLocked,
-                squareStyles: lastMoveSquares,
+                squareStyles,
                 animationDurationInMs: 200,
               }}
             />
-            {isPaused && (
-              <div className="board-pause-overlay"><span>Paused</span></div>
-            )}
-            {bjActive && !isPaused && (
-              <div className="board-pause-overlay board-pause-overlay--bj">
-                <span>Blackjack</span>
-              </div>
+            {isPaused && <div className="board-pause-overlay"><span>Paused</span></div>}
+            {bjActive && bj.phase !== 'resolved' && !isPaused && (
+              <div className="board-pause-overlay board-pause-overlay--bj"><span>Blackjack</span></div>
             )}
             {pendingPromo && (
               <div className="promotion-overlay">
@@ -252,40 +293,33 @@ export function GamePage() {
           />
         </div>
 
+        {/* Right sidebar */}
         <div className="game-sidebar">
           <div className={msgClass}>{statusMessage(snapshot, mode, pauseState, bjActive)}</div>
-
-          {bjActive ? (
-            <BlackjackTable
-              phase={bj.phase}
-              playerHand={bj.playerHand}
-              dealerHand={bj.dealerHand}
-              result={bj.result}
-              attackerLabel={captureLabels.attacker}
-              defenderLabel={captureLabels.defender}
-              onHit={bj.hit}
-              onStand={bj.stand}
-              onContinue={handleBJContinue}
-            />
-          ) : (
-            <>
-              <MoveHistory moves={snapshot.moves} />
-              <GameControls
-                mode={mode}
-                isGameOver={isGameOver}
-                pauseState={pauseState}
-                pauseOfferedBy={pauseOfferedBy}
-                onPause={handlePause}
-                onAcceptPause={handleAcceptPause}
-                onDeclinePause={handleDeclinePause}
-                onResume={handleResume}
-                onResign={resign}
-                onGoHome={() => navigate('/home')}
-              />
-            </>
-          )}
+          <MoveHistory moves={snapshot.moves} />
+          <GameControls
+            mode={mode}
+            isGameOver={isGameOver}
+            pauseState={pauseState}
+            pauseOfferedBy={pauseOfferedBy}
+            onPause={handlePause}
+            onAcceptPause={handleAcceptPause}
+            onDeclinePause={handleDeclinePause}
+            onResume={handleResume}
+            onResign={resign}
+            onGoHome={() => navigate('/home')}
+          />
         </div>
+
       </main>
     </div>
   )
+}
+
+function lastMoveHighlights(snapshot: GameSnapshot): Record<string, React.CSSProperties> {
+  if (!snapshot.lastMove) return {}
+  return {
+    [snapshot.lastMove.from]: { backgroundColor: 'rgba(255, 255, 0, 0.35)' },
+    [snapshot.lastMove.to]:   { backgroundColor: 'rgba(255, 255, 0, 0.5)'  },
+  }
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 type Suit = '♠' | '♥' | '♦' | '♣'
 type Rank = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K'
@@ -53,16 +53,6 @@ interface BJState {
 
 const IDLE: BJState = { phase: 'idle', playerHand: [], dealerHand: [], deck: [], result: null }
 
-function runDealer(state: BJState): BJState {
-  let dealerHand = state.dealerHand.map(c => ({ ...c, faceDown: false }))
-  let deck = [...state.deck]
-  while (handValue(dealerHand) < 17) dealerHand = [...dealerHand, deck.pop()!]
-  const p = handValue(state.playerHand)
-  const d = handValue(dealerHand)
-  const result: BlackjackResult = d > 21 || p > d ? 'win' : d > p ? 'lose' : 'push'
-  return { ...state, deck, dealerHand, phase: 'resolved', result }
-}
-
 export function useBlackjack() {
   const [bj, setBJ] = useState<BJState>(IDLE)
 
@@ -89,15 +79,45 @@ export function useBlackjack() {
       const total = handValue(playerHand)
       if (total > 21)
         return { ...prev, deck, playerHand, phase: 'resolved', result: 'lose', dealerHand: prev.dealerHand.map(c => ({ ...c, faceDown: false })) }
-      if (total === 21)
-        return runDealer({ ...prev, deck, playerHand })
+      if (total === 21) {
+        // Auto-stand: reveal dealer card and hand off to animated dealer turn
+        const dealerHand = prev.dealerHand.map(c => ({ ...c, faceDown: false }))
+        return { ...prev, deck, playerHand, dealerHand, phase: 'dealer-turn' }
+      }
       return { ...prev, deck, playerHand }
     })
   }, [])
 
   const stand = useCallback(() => {
-    setBJ(prev => prev.phase !== 'player-turn' ? prev : runDealer(prev))
+    setBJ(prev => {
+      if (prev.phase !== 'player-turn') return prev
+      const dealerHand = prev.dealerHand.map(c => ({ ...c, faceDown: false }))
+      return { ...prev, dealerHand, phase: 'dealer-turn' }
+    })
   }, [])
+
+  // Dealer plays one card at a time, 250 ms apart
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (bj.phase !== 'dealer-turn') return
+    const timer = setTimeout(() => {
+      setBJ(prev => {
+        if (prev.phase !== 'dealer-turn') return prev
+        const d = handValue(prev.dealerHand)
+        if (d < 17) {
+          const deck = [...prev.deck]
+          const dealerHand = [...prev.dealerHand, deck.pop()!]
+          const newD = handValue(dealerHand)
+          if (newD > 21) return { ...prev, deck, dealerHand, phase: 'resolved', result: 'win' }
+          return { ...prev, deck, dealerHand }
+        }
+        const p = handValue(prev.playerHand)
+        const result: BlackjackResult = d > p ? 'lose' : p > d ? 'win' : 'push'
+        return { ...prev, phase: 'resolved', result }
+      })
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [bj.phase, bj.dealerHand]) // re-fires each time dealer draws a card
 
   const reset = useCallback(() => setBJ(IDLE), [])
 
