@@ -5,6 +5,10 @@ import type { Color, PieceSymbol, Square, Move } from 'chess.js'
 export type GameMode = 'local' | 'computer'
 export type GameStatus = 'playing' | 'checkmate' | 'stalemate' | 'draw' | 'resigned' | 'timeout'
 
+export type GameEvent =
+  | { kind: 'chess'; san: string; color: Color; ply: number }
+  | { kind: 'bj'; piece: PieceSymbol; loserColor: Color }
+
 export interface GameSnapshot {
   fen: string
   turn: Color
@@ -13,25 +17,44 @@ export interface GameSnapshot {
   moves: Move[]
   capturedByWhite: PieceSymbol[]
   capturedByBlack: PieceSymbol[]
+  gameEvents: GameEvent[]
   lastMove: { from: Square; to: Square } | null
   isCheck: boolean
 }
+
+type LogEntry =
+  | { kind: 'chess'; move: Move }
+  | { kind: 'bj'; piece: PieceSymbol; loserColor: Color }
 
 function buildSnapshot(
   chess: Chess,
   status: GameStatus,
   winner: Color | null,
   lastMove: { from: Square; to: Square } | null,
+  log: LogEntry[] = [],
 ): GameSnapshot {
-  const moves = chess.history({ verbose: true }) as Move[]
   const capturedByWhite: PieceSymbol[] = []
   const capturedByBlack: PieceSymbol[] = []
-  for (const m of moves) {
-    if (m.captured) {
-      if (m.color === 'w') capturedByWhite.push(m.captured)
-      else capturedByBlack.push(m.captured)
+  const gameEvents: GameEvent[] = []
+  const moves: Move[] = []
+  let chessPly = 0
+
+  for (const entry of log) {
+    if (entry.kind === 'chess') {
+      if (entry.move.captured) {
+        if (entry.move.color === 'w') capturedByWhite.push(entry.move.captured)
+        else capturedByBlack.push(entry.move.captured)
+      }
+      gameEvents.push({ kind: 'chess', san: entry.move.san, color: entry.move.color, ply: chessPly })
+      moves.push(entry.move)
+      chessPly++
+    } else {
+      if (entry.loserColor === 'w') capturedByBlack.push(entry.piece)
+      else capturedByWhite.push(entry.piece)
+      gameEvents.push({ kind: 'bj', piece: entry.piece, loserColor: entry.loserColor })
     }
   }
+
   return {
     fen: chess.fen(),
     turn: chess.turn(),
@@ -40,6 +63,7 @@ function buildSnapshot(
     moves,
     capturedByWhite,
     capturedByBlack,
+    gameEvents,
     lastMove,
     isCheck: chess.isCheck(),
   }
@@ -55,6 +79,7 @@ function resolveStatus(chess: Chess): { status: GameStatus; winner: Color | null
 export function useChessGame(mode: GameMode, paused = false) {
   const chessRef = useRef(new Chess())
   const statusRef = useRef<GameStatus>('playing')
+  const logRef = useRef<LogEntry[]>([])
 
   const [snapshot, setSnapshot] = useState<GameSnapshot>(() =>
     buildSnapshot(chessRef.current, 'playing', null, null),
@@ -68,8 +93,9 @@ export function useChessGame(mode: GameMode, paused = false) {
     try {
       const move = chess.move({ from, to, promotion })
       if (!move) return false
+      logRef.current.push({ kind: 'chess', move })
       const { status, winner } = resolveStatus(chess)
-      setSnapshot(buildSnapshot(chess, status, winner, { from, to }))
+      setSnapshot(buildSnapshot(chess, status, winner, { from, to }, logRef.current))
       return true
     } catch {
       return false
@@ -95,6 +121,7 @@ export function useChessGame(mode: GameMode, paused = false) {
   const reset = useCallback(() => {
     const chess = new Chess()
     chessRef.current = chess
+    logRef.current = []
     setSnapshot(buildSnapshot(chess, 'playing', null, null))
   }, [])
 
@@ -106,9 +133,10 @@ export function useChessGame(mode: GameMode, paused = false) {
       const legal = chess.moves({ verbose: true }) as Move[]
       if (!legal.length) return
       const picked = legal[Math.floor(Math.random() * legal.length)]
-      chess.move({ from: picked.from, to: picked.to, promotion: picked.promotion })
+      const move = chess.move({ from: picked.from, to: picked.to, promotion: picked.promotion })
+      logRef.current.push({ kind: 'chess', move })
       const { status, winner } = resolveStatus(chess)
-      setSnapshot(buildSnapshot(chess, status, winner, { from: picked.from, to: picked.to }))
+      setSnapshot(buildSnapshot(chess, status, winner, { from: picked.from, to: picked.to }, logRef.current))
     }, 450)
     return () => clearTimeout(timer)
   }, [snapshot.turn, snapshot.status, mode, paused])
@@ -135,9 +163,13 @@ export function useChessGame(mode: GameMode, paused = false) {
     return (chessRef.current.moves({ square, verbose: true }) as Move[]).map(m => m.to as Square)
   }, [])
 
-  // Attacker loses blackjack: remove attacker's piece, keep defender in place, switch turns
+  // Attacker loses blackjack: log the BJ event, remove attacker's piece, switch turns
   const captureReversed = useCallback((from: Square) => {
     const chess = chessRef.current
+    const attackerPiece = chess.get(from)
+    if (attackerPiece) {
+      logRef.current.push({ kind: 'bj', piece: attackerPiece.type, loserColor: attackerPiece.color })
+    }
     chess.remove(from)
     const parts = chess.fen().split(' ')
     const wasTurn = parts[1] as Color
@@ -147,7 +179,7 @@ export function useChessGame(mode: GameMode, paused = false) {
     if (wasTurn === 'b') parts[5] = String(parseInt(parts[5]) + 1)
     chess.load(parts.join(' '))
     const { status, winner } = resolveStatus(chess)
-    setSnapshot(buildSnapshot(chess, status, winner, null))
+    setSnapshot(buildSnapshot(chess, status, winner, null, logRef.current))
   }, [])
 
   // Push: no pieces move, just switch turns
@@ -161,7 +193,7 @@ export function useChessGame(mode: GameMode, paused = false) {
     if (wasTurn === 'b') parts[5] = String(parseInt(parts[5]) + 1)
     chess.load(parts.join(' '))
     const { status, winner } = resolveStatus(chess)
-    setSnapshot(buildSnapshot(chess, status, winner, null))
+    setSnapshot(buildSnapshot(chess, status, winner, null, logRef.current))
   }, [])
 
   return { snapshot, makeMove, resign, timeout, reset, isPlayerTurn, isPawnPromotion, isCapture, legalMovesFrom, captureReversed, cancelCapture }

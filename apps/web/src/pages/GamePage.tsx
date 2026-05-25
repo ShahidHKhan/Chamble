@@ -296,7 +296,7 @@ export function GamePage() {
         {/* Right sidebar */}
         <div className="game-sidebar">
           <div className={msgClass}>{statusMessage(snapshot, mode, pauseState, bjActive)}</div>
-          <MoveHistory moves={snapshot.moves} />
+          <MoveHistory events={snapshot.gameEvents} />
           <GameControls
             mode={mode}
             isGameOver={isGameOver}

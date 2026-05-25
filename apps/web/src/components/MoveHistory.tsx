@@ -1,36 +1,50 @@
 import { useEffect, useRef } from 'react'
-import type { Move } from 'chess.js'
+import type { GameEvent } from '../hooks/useChessGame'
 
-interface Props {
-  moves: Move[]
+const PIECE_GLYPHS: Record<string, Record<string, string>> = {
+  w: { p: '♙', n: '♘', b: '♗', r: '♖', q: '♕', k: '♔' },
+  b: { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' },
 }
 
-export function MoveHistory({ moves }: Props) {
+interface Props {
+  events: GameEvent[]
+}
+
+export function MoveHistory({ events }: Props) {
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [moves.length])
-
-  const pairs: [Move, Move | undefined][] = []
-  for (let i = 0; i < moves.length; i += 2) {
-    pairs.push([moves[i], moves[i + 1]])
-  }
+  }, [events.length])
 
   return (
     <div className="move-history">
       <div className="move-history__title">Moves</div>
       <div className="move-history__list">
-        {pairs.length === 0 && (
+        {events.length === 0 && (
           <div className="move-history__empty">No moves yet</div>
         )}
-        {pairs.map(([white, black], i) => (
-          <div key={i} className="move-history__row">
-            <span className="move-history__num">{i + 1}.</span>
-            <span className="move-history__move">{white.san}</span>
-            <span className="move-history__move move-history__move--black">{black?.san ?? ''}</span>
-          </div>
-        ))}
+        {events.map((event, i) => {
+          if (event.kind === 'chess') {
+            const moveNum = Math.floor(event.ply / 2) + 1
+            const isBlack = event.ply % 2 === 1
+            return (
+              <div key={i} className="move-history__row">
+                <span className="move-history__num">{moveNum}.</span>
+                <span className={`move-history__move${isBlack ? ' move-history__move--black' : ''}`}>
+                  {isBlack ? 'B' : 'W'} {event.san}
+                </span>
+              </div>
+            )
+          }
+          const glyph = PIECE_GLYPHS[event.loserColor][event.piece]
+          return (
+            <div key={i} className="move-history__row move-history__row--bj">
+              <span className="move-history__num">BJ</span>
+              <span className="move-history__move move-history__move--bj">{glyph} lost</span>
+            </div>
+          )
+        })}
         <div ref={endRef} />
       </div>
     </div>

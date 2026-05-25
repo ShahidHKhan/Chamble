@@ -212,7 +212,7 @@
 
 .move-history__row {
   display: grid;
-  grid-template-columns: 28px 1fr 1fr;
+  grid-template-columns: 28px 1fr;
   gap: 2px;
   padding: 3px 14px;
   font-family: var(--mono);
@@ -236,6 +236,15 @@
 
 .move-history__move--black {
   color: var(--text);
+}
+
+.move-history__row--bj {
+  background: rgba(201, 168, 76, 0.06);
+}
+
+.move-history__move--bj {
+  color: var(--accent);
+  font-style: italic;
 }
 
 /* ── Game controls ── */
@@ -508,9 +517,9 @@
 }
 
 .bj-card--facedown {
-  background: #2a3a5c;
-  color: #6b8cba;
-  border-color: #3a4f78;
+  background: #3d0f0f;
+  color: #8b3333;
+  border-color: #5c1a1a;
   font-size: 18px;
 }
 
