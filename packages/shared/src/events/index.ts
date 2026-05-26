@@ -12,4 +12,15 @@ export const EVENTS = {
   DRAW_ACCEPT:   'draw_accept',
   RESIGN:        'resign',
   CLOCK_TICK:    'clock_tick',
+  // Pause
+  PAUSE_OFFER:            'pause_offer',
+  PAUSE_ACCEPT:           'pause_accept',
+  PAUSE_DECLINE:          'pause_decline',
+  PAUSE_RESUME:           'pause_resume',
+  // Presence
+  OPPONENT_DISCONNECTED:  'opponent_disconnected',
+  OPPONENT_RECONNECTED:   'opponent_reconnected',
+  // State sync (for rejoin)
+  SYNC_REQUEST:           'sync_request',
+  SYNC_STATE:             'sync_state',
 } as const

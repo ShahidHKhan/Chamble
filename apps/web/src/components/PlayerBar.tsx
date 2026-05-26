@@ -17,9 +17,10 @@ interface Props {
   isActive: boolean
   captured: PieceSymbol[]
   isGameOver: boolean
+  disconnected?: boolean
 }
 
-export function PlayerBar({ color, name, timeMs, isActive, captured, isGameOver }: Props) {
+export function PlayerBar({ color, name, timeMs, isActive, captured, isGameOver, disconnected }: Props) {
   const sorted = [...captured].sort((a, b) => PIECE_VALUES[a] - PIECE_VALUES[b])
   // Pieces this player captured are opponent's color
   const glyphs = color === 'w' ? PIECE_GLYPHS.black : PIECE_GLYPHS.white
@@ -30,6 +31,7 @@ export function PlayerBar({ color, name, timeMs, isActive, captured, isGameOver 
       <div className="player-bar__info">
         <span className={`player-bar__dot player-bar__dot--${color === 'w' ? 'white' : 'black'}`} />
         <span className="player-bar__name">{name}</span>
+        {disconnected && <span className="player-bar__left-tag">left</span>}
         <span className="player-bar__captures">
           {sorted.map((p, i) => (
             <span key={i} className="player-bar__piece">{glyphs[p]}</span>

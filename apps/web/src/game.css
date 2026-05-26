@@ -99,6 +99,19 @@
   white-space: nowrap;
 }
 
+.player-bar__left-tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #c0392b;
+  background: rgba(192, 57, 43, 0.15);
+  border: 1px solid rgba(192, 57, 43, 0.4);
+  border-radius: 3px;
+  padding: 1px 5px;
+  line-height: 1.4;
+}
+
 .player-bar__captures {
   display: flex;
   flex-wrap: wrap;
@@ -392,6 +405,15 @@
 .pause-offer__btns {
   display: flex;
   gap: 8px;
+}
+
+.pause-offer__waiting {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text);
+  text-align: center;
+  font-style: italic;
+  opacity: 0.7;
 }
 
 /* ── Button variants ── */

@@ -7,6 +7,8 @@ interface Props {
   isGameOver: boolean
   pauseState: PauseState
   pauseOfferedBy: 'w' | 'b' | null
+  /** false when the local player is the one who offered the pause (show "waiting" instead of accept/decline) */
+  canRespondToPause?: boolean
   onPause: () => void
   onAcceptPause: () => void
   onDeclinePause: () => void
@@ -17,6 +19,7 @@ interface Props {
 
 export function GameControls({
   mode, isGameOver, pauseState, pauseOfferedBy,
+  canRespondToPause = true,
   onPause, onAcceptPause, onDeclinePause, onResume, onResign, onGoHome,
 }: Props) {
   return (
@@ -46,10 +49,14 @@ export function GameControls({
               <p className="pause-offer__text">
                 {pauseOfferedBy === 'w' ? 'White' : 'Black'} requested a pause
               </p>
-              <div className="pause-offer__btns">
-                <button className="btn btn--primary" onClick={onAcceptPause}>Accept</button>
-                <button className="btn btn--ghost" onClick={onDeclinePause}>Decline</button>
-              </div>
+              {canRespondToPause ? (
+                <div className="pause-offer__btns">
+                  <button className="btn btn--primary" onClick={onAcceptPause}>Accept</button>
+                  <button className="btn btn--ghost" onClick={onDeclinePause}>Decline</button>
+                </div>
+              ) : (
+                <p className="pause-offer__waiting">Waiting for opponent…</p>
+              )}
             </div>
           )}
 

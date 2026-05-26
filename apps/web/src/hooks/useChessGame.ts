@@ -2,7 +2,18 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { Chess } from 'chess.js'
 import type { Color, PieceSymbol, Square, Move } from 'chess.js'
 
-export type GameMode = 'local' | 'computer'
+export type SyncEntry =
+  | { kind: 'chess'; san: string; color: Color; captured?: PieceSymbol }
+  | { kind: 'bj'; piece: PieceSymbol; loserColor: Color }
+
+export interface SyncState {
+  fen: string
+  log: SyncEntry[]
+  status: GameStatus
+  winner: Color | null
+}
+
+export type GameMode = 'local' | 'computer' | 'multiplayer'
 export type GameStatus = 'playing' | 'checkmate' | 'stalemate' | 'draw' | 'resigned' | 'timeout'
 
 export type GameEvent =
@@ -76,16 +87,18 @@ function resolveStatus(chess: Chess): { status: GameStatus; winner: Color | null
   return { status: 'playing', winner: null }
 }
 
-export function useChessGame(mode: GameMode, paused = false) {
-  const chessRef = useRef(new Chess())
-  const statusRef = useRef<GameStatus>('playing')
-  const logRef = useRef<LogEntry[]>([])
+export function useChessGame(mode: GameMode, paused = false, playerColor: Color = 'w') {
+  const chessRef    = useRef(new Chess())
+  const statusRef   = useRef<GameStatus>('playing')
+  const logRef      = useRef<LogEntry[]>([])
+  const snapshotRef = useRef<ReturnType<typeof buildSnapshot> | null>(null)
 
   const [snapshot, setSnapshot] = useState<GameSnapshot>(() =>
     buildSnapshot(chessRef.current, 'playing', null, null),
   )
 
-  statusRef.current = snapshot.status
+  statusRef.current   = snapshot.status
+  snapshotRef.current = snapshot
 
   const makeMove = useCallback((from: Square, to: Square, promotion: PieceSymbol = 'q'): boolean => {
     if (statusRef.current !== 'playing') return false
@@ -141,7 +154,10 @@ export function useChessGame(mode: GameMode, paused = false) {
     return () => clearTimeout(timer)
   }, [snapshot.turn, snapshot.status, mode, paused])
 
-  const isPlayerTurn = mode === 'local' || snapshot.turn === 'w'
+  const isPlayerTurn =
+    mode === 'local' ||
+    (mode === 'computer' && snapshot.turn === 'w') ||
+    (mode === 'multiplayer' && snapshot.turn === playerColor)
 
   const isPawnPromotion = useCallback((from: Square, to: Square): boolean => {
     const piece = chessRef.current.get(from)
@@ -196,5 +212,37 @@ export function useChessGame(mode: GameMode, paused = false) {
     setSnapshot(buildSnapshot(chess, status, winner, null, logRef.current))
   }, [])
 
-  return { snapshot, makeMove, resign, timeout, reset, isPlayerTurn, isPawnPromotion, isCapture, legalMovesFrom, captureReversed, cancelCapture }
+  const forceResign = useCallback((loserColor: Color) => {
+    setSnapshot(prev => ({
+      ...prev,
+      status: 'resigned',
+      winner: loserColor === 'w' ? 'b' : 'w',
+    }))
+  }, [])
+
+  const exportState = useCallback((): SyncState => ({
+    fen: chessRef.current.fen(),
+    log: logRef.current.map(e =>
+      e.kind === 'chess'
+        ? { kind: 'chess' as const, san: e.move.san, color: e.move.color, captured: e.move.captured }
+        : { kind: 'bj' as const, piece: e.piece, loserColor: e.loserColor }
+    ),
+    status: snapshotRef.current?.status ?? 'playing',
+    winner: snapshotRef.current?.winner ?? null,
+  }), [])
+
+  const restoreState = useCallback((state: SyncState) => {
+    const chess = new Chess()
+    chess.load(state.fen)
+    chessRef.current = chess
+    const newLog: LogEntry[] = state.log.map(e =>
+      e.kind === 'chess'
+        ? { kind: 'chess' as const, move: { san: e.san, color: e.color, captured: e.captured } as Move }
+        : { kind: 'bj' as const, piece: e.piece, loserColor: e.loserColor }
+    )
+    logRef.current = newLog
+    setSnapshot(buildSnapshot(chess, state.status, state.winner, null, newLog))
+  }, [])
+
+  return { snapshot, makeMove, resign, forceResign, timeout, reset, exportState, restoreState, isPlayerTurn, isPawnPromotion, isCapture, legalMovesFrom, captureReversed, cancelCapture }
 }

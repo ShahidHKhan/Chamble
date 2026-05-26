@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Chessboard } from 'react-chessboard'
-import type { Square, PieceSymbol } from 'chess.js'
-import { useChessGame, type GameMode, type GameSnapshot } from '../hooks/useChessGame'
+import type { Square, PieceSymbol, Color } from 'chess.js'
+import { socket } from '../lib/socket'
+import { EVENTS } from '@chess/shared'
+import { useChessGame, type GameMode, type GameSnapshot, type SyncState } from '../hooks/useChessGame'
 import { useClock } from '../hooks/useClock'
 import { useBlackjack } from '../hooks/useBlackjack'
 import { PlayerBar } from '../components/PlayerBar'
@@ -49,8 +51,22 @@ function statusMessage(snapshot: GameSnapshot, mode: GameMode, pauseState: Pause
 export function GamePage() {
   const location    = useLocation()
   const navigate    = useNavigate()
-  const initialMode: GameMode = (location.state as { mode?: GameMode })?.mode ?? 'local'
-  const [mode]      = useState<GameMode>(initialMode)
+  const locState    = (location.state ?? {}) as { mode?: GameMode; color?: Color; opponent?: string; gameId?: string; isRejoin?: boolean }
+  const initialMode: GameMode = locState.mode ?? 'local'
+  const playerColor: Color    = locState.color ?? 'w'
+  const opponentName: string  = locState.opponent ?? (initialMode === 'computer' ? 'Computer' : 'Opponent')
+  const gameId   = locState.gameId  ?? ''
+  const isRejoin = locState.isRejoin ?? false
+
+  // The player whose pieces are at the BOTTOM of the board (always the local player's perspective)
+  const bottomColor: Color = playerColor
+  const topColor:    Color = playerColor === 'w' ? 'b' : 'w'
+  const bottomName = playerColor === 'w' ? 'White' : 'Black'
+  const topName    = initialMode === 'computer' && topColor === 'b' ? 'Computer' : opponentName
+
+  const [mode]               = useState<GameMode>(initialMode)
+  const [opponentDisconnected, setOpponentDisconnected] = useState(false)
+  const [isSyncing,            setIsSyncing]            = useState(isRejoin)
   const [boardWidth, setBoardWidth] = useState(480)
   const boardContainerRef = useRef<HTMLDivElement>(null)
 
@@ -67,9 +83,10 @@ export function GamePage() {
   const [moveHighlights,  setMoveHighlights]  = useState<Record<string, React.CSSProperties>>({})
 
   const {
-    snapshot, makeMove, resign, timeout, isPlayerTurn,
+    snapshot, makeMove, resign, forceResign, timeout, isPlayerTurn,
     isPawnPromotion, isCapture, legalMovesFrom, captureReversed, cancelCapture,
-  } = useChessGame(mode, isPaused)
+    exportState, restoreState,
+  } = useChessGame(mode, isPaused, playerColor)
   const { times, active, setActive, isExpired, expiredColor } = useClock(600_000)
   const bj = useBlackjack()
 
@@ -96,6 +113,110 @@ export function GamePage() {
     if (isExpired && expiredColor && snapshot.status === 'playing') { setActive(null); timeout(expiredColor) }
   }, [isExpired, expiredColor, snapshot.status, timeout, setActive])
 
+  // Socket stays connected from the lobby for the duration of the game.
+  // We do NOT disconnect in an effect cleanup because React StrictMode runs cleanups
+  // on an artificial unmount in dev, which would kill the connection permanently
+  // (explicit socket.disconnect() suppresses auto-reconnect in Socket.IO).
+  // Disconnect happens explicitly when the user navigates away via the button below.
+
+  // Relay incoming moves from the opponent
+  useEffect(() => {
+    if (mode !== 'multiplayer') return
+    type RemoteMove =
+      | { kind: 'move'; from: string; to: string; promotion?: string }
+      | { kind: 'capture_reversed'; from: string }
+      | { kind: 'push' }
+    const onRemoteMove = (data: RemoteMove) => {
+      if (data.kind === 'move')                  makeMove(data.from as Square, data.to as Square, (data.promotion ?? 'q') as PieceSymbol)
+      else if (data.kind === 'capture_reversed') captureReversed(data.from as Square)
+      else                                       cancelCapture()
+    }
+    socket.on(EVENTS.MOVE, onRemoteMove)
+    return () => { socket.off(EVENTS.MOVE, onRemoteMove) }
+  }, [mode, makeMove, captureReversed, cancelCapture])
+
+  // Relay incoming pause events from the opponent
+  useEffect(() => {
+    if (mode !== 'multiplayer') return
+    const onPauseOffer   = () => { setPauseOfferedBy(playerColor === 'w' ? 'b' : 'w'); setPauseState('offered') }
+    const onPauseAccept  = () => { setActive(null); setPauseState('paused') }
+    const onPauseDecline = () => { setPauseState('none'); setPauseOfferedBy(null) }
+    const onPauseResume  = () => {
+      setPauseState('none')
+      setPauseOfferedBy(null)
+      if (snapshot.status === 'playing') setActive(snapshot.turn)
+    }
+    socket.on(EVENTS.PAUSE_OFFER,   onPauseOffer)
+    socket.on(EVENTS.PAUSE_ACCEPT,  onPauseAccept)
+    socket.on(EVENTS.PAUSE_DECLINE, onPauseDecline)
+    socket.on(EVENTS.PAUSE_RESUME,  onPauseResume)
+    return () => {
+      socket.off(EVENTS.PAUSE_OFFER,   onPauseOffer)
+      socket.off(EVENTS.PAUSE_ACCEPT,  onPauseAccept)
+      socket.off(EVENTS.PAUSE_DECLINE, onPauseDecline)
+      socket.off(EVENTS.PAUSE_RESUME,  onPauseResume)
+    }
+  }, [mode, playerColor, snapshot.status, snapshot.turn, setActive])
+
+  // Single helper: emit any in-game event with gameId attached
+  const emitToGame = useCallback((ev: string, payload: object = {}) => {
+    if (mode !== 'multiplayer') return
+    socket.emit(ev, { gameId, ...payload })
+  }, [mode, gameId])
+
+  // Shorthand aliases used at call sites
+  const emitMove  = useCallback((data: object) => emitToGame(EVENTS.MOVE,  data),  [emitToGame])
+  const emitPause = useCallback((ev: string)   => emitToGame(ev),                   [emitToGame])
+
+  // Resign sync: opponent resigned → force the correct winner locally
+  useEffect(() => {
+    if (mode !== 'multiplayer') return
+    const onResign = ({ color }: { color: string }) => forceResign(color as Color)
+    socket.on(EVENTS.RESIGN, onResign)
+    return () => { socket.off(EVENTS.RESIGN, onResign) }
+  }, [mode, forceResign])
+
+  // Presence: opponent closed tab → show flag; opponent rejoined → hide flag + send sync
+  useEffect(() => {
+    if (mode !== 'multiplayer') return
+    const onDisconnected = () => {
+      if (snapshot.status === 'playing') setOpponentDisconnected(true)
+    }
+    const onReconnected = () => {
+      setOpponentDisconnected(false)
+    }
+    socket.on(EVENTS.OPPONENT_DISCONNECTED, onDisconnected)
+    socket.on(EVENTS.OPPONENT_RECONNECTED,  onReconnected)
+    return () => {
+      socket.off(EVENTS.OPPONENT_DISCONNECTED, onDisconnected)
+      socket.off(EVENTS.OPPONENT_RECONNECTED,  onReconnected)
+    }
+  }, [mode, snapshot.status])
+
+  // State sync: answer sync requests from a rejoining opponent
+  useEffect(() => {
+    if (mode !== 'multiplayer') return
+    const onSyncRequest = () => {
+      emitToGame(EVENTS.SYNC_STATE, exportState())
+    }
+    socket.on(EVENTS.SYNC_REQUEST, onSyncRequest)
+    return () => { socket.off(EVENTS.SYNC_REQUEST, onSyncRequest) }
+  }, [mode, emitToGame, exportState])
+
+  // State sync: if we just rejoined, request state from the remaining player
+  useEffect(() => {
+    if (mode !== 'multiplayer' || !isRejoin) return
+    const onSyncState = (state: SyncState) => {
+      restoreState(state)
+      setIsSyncing(false)
+    }
+    socket.on(EVENTS.SYNC_STATE, onSyncState)
+    emitToGame(EVENTS.SYNC_REQUEST)
+    return () => { socket.off(EVENTS.SYNC_STATE, onSyncState) }
+  // Only run once on mount — emitToGame is stable
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, isRejoin])
+
   // Reset pause on game end
   useEffect(() => {
     if (snapshot.status !== 'playing') { setPauseState('none'); setPauseOfferedBy(null) }
@@ -115,9 +236,16 @@ export function GamePage() {
     const timer = setTimeout(() => {
       setPendingCapture(null)
       bj.reset()
-      if (result === 'win')       makeMove(from, to, 'q')
-      else if (result === 'lose') captureReversed(from)
-      else                        cancelCapture()
+      if (result === 'win') {
+        makeMove(from, to, 'q')
+        emitMove({ kind: 'move', from, to, promotion: 'q' })
+      } else if (result === 'lose') {
+        captureReversed(from)
+        emitMove({ kind: 'capture_reversed', from })
+      } else {
+        cancelCapture()
+        emitMove({ kind: 'push' })
+      }
     }, 1500)
     return () => clearTimeout(timer)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,16 +265,44 @@ export function GamePage() {
 
   // ── Event handlers ─────────────────────────────────────────────────────────
 
-  const handlePause        = useCallback(() => {
-    if (mode === 'computer') { setActive(null); setPauseState('paused') }
-    else { setPauseOfferedBy(snapshot.turn); setPauseState('offered') }
-  }, [mode, snapshot.turn, setActive])
-  const handleAcceptPause  = useCallback(() => { setActive(null); setPauseState('paused') }, [setActive])
-  const handleDeclinePause = useCallback(() => { setPauseState('none'); setPauseOfferedBy(null) }, [])
-  const handleResume       = useCallback(() => {
-    setPauseState('none'); setPauseOfferedBy(null)
+  const handleResign = useCallback(() => {
+    emitToGame(EVENTS.RESIGN, { color: playerColor })
+    forceResign(playerColor)  // use playerColor directly — resign() uses prev.turn which can be wrong
+  }, [emitToGame, playerColor, forceResign])
+
+  const handlePause = useCallback(() => {
+    if (mode === 'computer') {
+      setActive(null)
+      setPauseState('paused')
+    } else if (mode === 'local') {
+      setPauseOfferedBy(snapshot.turn)
+      setPauseState('offered')
+    } else {
+      // multiplayer: offer to opponent
+      setPauseOfferedBy(playerColor)
+      setPauseState('offered')
+      emitPause(EVENTS.PAUSE_OFFER)
+    }
+  }, [mode, playerColor, snapshot.turn, setActive, emitPause])
+
+  const handleAcceptPause = useCallback(() => {
+    setActive(null)
+    setPauseState('paused')
+    emitPause(EVENTS.PAUSE_ACCEPT)
+  }, [setActive, emitPause])
+
+  const handleDeclinePause = useCallback(() => {
+    setPauseState('none')
+    setPauseOfferedBy(null)
+    emitPause(EVENTS.PAUSE_DECLINE)
+  }, [emitPause])
+
+  const handleResume = useCallback(() => {
+    setPauseState('none')
+    setPauseOfferedBy(null)
     if (snapshot.status === 'playing') setActive(snapshot.turn)
-  }, [snapshot.status, snapshot.turn, setActive])
+    emitPause(EVENTS.PAUSE_RESUME)
+  }, [snapshot.status, snapshot.turn, setActive, emitPause])
 
   // Drag-to-move
   const handlePieceDrop = useCallback(({ sourceSquare, targetSquare }: PieceDropArgs): boolean => {
@@ -155,8 +311,10 @@ export function GamePage() {
     const to   = targetSquare as Square
     if (isCapture(from, to))      { triggerCapture(from, to); return false }
     if (isPawnPromotion(from, to)) { setPendingPromo({ from, to }); return false }
-    return makeMove(from, to)
-  }, [makeMove, isPlayerTurn, isPaused, bjActive, isPawnPromotion, isCapture, triggerCapture])
+    const moved = makeMove(from, to)
+    if (moved) emitMove({ kind: 'move', from, to })
+    return moved
+  }, [makeMove, emitMove, isPlayerTurn, isPaused, bjActive, isPawnPromotion, isCapture, triggerCapture])
 
   // Click-to-move
   const handleSquareClick = useCallback(({ square }: SquareClickArgs) => {
@@ -175,7 +333,8 @@ export function GamePage() {
       setSelectedSquare(null); setMoveHighlights({})
       if (isCapture(from, to))       { triggerCapture(from, to); return }
       if (isPawnPromotion(from, to)) { setPendingPromo({ from, to }); return }
-      makeMove(from, to)
+      const moved = makeMove(from, to)
+      if (moved) emitMove({ kind: 'move', from, to })
       return
     }
 
@@ -195,20 +354,25 @@ export function GamePage() {
     setMoveHighlights(highlights)
   }, [
     selectedSquare, moveHighlights, isPlayerTurn, isPaused, bjActive, isGameOver,
-    legalMovesFrom, isCapture, isPawnPromotion, makeMove, triggerCapture,
+    legalMovesFrom, isCapture, isPawnPromotion, makeMove, triggerCapture, emitMove,
   ])
 
   const handlePromotion = useCallback((piece: PieceSymbol) => {
     if (!pendingPromo) return
-    makeMove(pendingPromo.from, pendingPromo.to, piece)
+    const { from, to } = pendingPromo
+    makeMove(from, to, piece)
+    emitMove({ kind: 'move', from, to, promotion: piece })
     setPendingPromo(null)
-  }, [pendingPromo, makeMove])
+  }, [pendingPromo, makeMove, emitMove])
 
   // ── Derived styles ─────────────────────────────────────────────────────────
 
   const squareStyles = { ...lastMoveHighlights(snapshot), ...moveHighlights }
 
   const boardLocked = !isPlayerTurn || isGameOver || isPaused || !!pendingPromo || bjActive
+
+  // In multiplayer the player who offered the pause can't accept their own offer
+  const canRespondToPause = mode !== 'multiplayer' || pauseOfferedBy !== playerColor
 
   const msgClass = [
     'game-status',
@@ -245,12 +409,13 @@ export function GamePage() {
         {/* Chessboard */}
         <div className="board-section" ref={boardContainerRef}>
           <PlayerBar
-            color="b"
-            name={mode === 'computer' ? 'Computer' : 'Black'}
-            timeMs={times.black}
-            isActive={active === 'b' && !isGameOver && !isPaused}
-            captured={snapshot.capturedByBlack}
+            color={topColor}
+            name={topName}
+            timeMs={topColor === 'w' ? times.white : times.black}
+            isActive={active === topColor && !isGameOver && !isPaused}
+            captured={topColor === 'w' ? snapshot.capturedByWhite : snapshot.capturedByBlack}
             isGameOver={isGameOver}
+            disconnected={mode === 'multiplayer' && opponentDisconnected}
           />
           <div className="board-wrapper">
             <Chessboard
@@ -262,9 +427,11 @@ export function GamePage() {
                 allowDragging: !boardLocked,
                 squareStyles,
                 animationDurationInMs: 200,
+                boardOrientation: playerColor === 'b' ? 'black' : 'white',
               }}
             />
-            {isPaused && <div className="board-pause-overlay"><span>Paused</span></div>}
+            {isSyncing && <div className="board-pause-overlay"><span>Syncing…</span></div>}
+            {isPaused && !isSyncing && <div className="board-pause-overlay"><span>Paused</span></div>}
             {bjActive && bj.phase !== 'resolved' && !isPaused && (
               <div className="board-pause-overlay board-pause-overlay--bj"><span>Blackjack</span></div>
             )}
@@ -284,11 +451,11 @@ export function GamePage() {
             )}
           </div>
           <PlayerBar
-            color="w"
-            name="White"
-            timeMs={times.white}
-            isActive={active === 'w' && !isGameOver && !isPaused}
-            captured={snapshot.capturedByWhite}
+            color={bottomColor}
+            name={bottomName}
+            timeMs={bottomColor === 'w' ? times.white : times.black}
+            isActive={active === bottomColor && !isGameOver && !isPaused}
+            captured={bottomColor === 'w' ? snapshot.capturedByWhite : snapshot.capturedByBlack}
             isGameOver={isGameOver}
           />
         </div>
@@ -302,12 +469,13 @@ export function GamePage() {
             isGameOver={isGameOver}
             pauseState={pauseState}
             pauseOfferedBy={pauseOfferedBy}
+            canRespondToPause={canRespondToPause}
             onPause={handlePause}
             onAcceptPause={handleAcceptPause}
             onDeclinePause={handleDeclinePause}
             onResume={handleResume}
-            onResign={resign}
-            onGoHome={() => navigate('/home')}
+            onResign={handleResign}
+            onGoHome={() => { if (mode === 'multiplayer') socket.disconnect(); navigate('/home') }}
           />
         </div>
 
