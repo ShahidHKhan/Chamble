@@ -679,6 +679,209 @@
   font-style: italic;
 }
 
+/* ── Chess-Matics left panel wrapper ── */
+.matics-panel-wrapper {
+  width: 280px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  transition: opacity 0.3s;
+}
+
+.matics-panel-wrapper--idle {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* ── Matics table (mirrors bj-table) ── */
+.matics-table {
+  background: var(--code-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.matics-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.matics-header__title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.matics-header__sub {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.matics-idle-hint {
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.45;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ── Traffic light ── */
+.traffic-light {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: #111;
+  border: 2px solid #2a2a2a;
+  border-radius: 14px;
+  padding: 14px 18px;
+  width: fit-content;
+  margin: 4px auto;
+}
+
+.traffic-light__bulb {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  transition: background 0.1s, box-shadow 0.15s;
+}
+
+.traffic-light__red {
+  background: #3a0d0d;
+}
+.traffic-light__red.traffic-light__bulb--on {
+  background: #ef4444;
+  box-shadow: 0 0 14px 4px rgba(239, 68, 68, 0.75);
+}
+
+.traffic-light__yellow {
+  background: #2e2400;
+}
+.traffic-light__yellow.traffic-light__bulb--on {
+  background: #eab308;
+  box-shadow: 0 0 14px 4px rgba(234, 179, 8, 0.75);
+}
+
+.traffic-light__green {
+  background: #062206;
+}
+.traffic-light__green.traffic-light__bulb--on {
+  background: #22c55e;
+  box-shadow: 0 0 14px 4px rgba(34, 197, 94, 0.75);
+}
+
+/* ── Math problem display ── */
+.matics-problem {
+  font-size: 30px;
+  font-weight: 700;
+  font-family: var(--mono);
+  color: var(--text-h);
+  text-align: center;
+  padding: 10px 0 4px;
+  letter-spacing: 0.04em;
+}
+
+/* ── Answer inputs ── */
+.matics-two-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.matics-answer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.matics-answer-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  opacity: 0.55;
+  width: 56px;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.matics-answer-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-h);
+  font-size: 16px;
+  font-family: var(--mono);
+  padding: 6px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+  -moz-appearance: textfield;
+}
+.matics-answer-input::-webkit-outer-spin-button,
+.matics-answer-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.matics-answer-input:focus { border-color: var(--accent-border); }
+
+.matics-submit-btn {
+  flex-shrink: 0;
+  padding: 6px 10px !important;
+  font-size: 14px;
+}
+
+/* ── Result banner ── */
+.matics-waiting {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.65;
+  text-align: center;
+  font-style: italic;
+  padding: 8px 0;
+  animation: bj-blink 1s ease-in-out infinite;
+}
+
+.matics-result {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.matics-result--win {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.matics-result--lose {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Board overlay for matics */
+.board-pause-overlay--matics {
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--accent);
+}
+
+/* Status badge for matics */
+.game-status--matics {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  font-style: italic;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1100px) {
   .board-section {

@@ -23,4 +23,8 @@ export const EVENTS = {
   // State sync (for rejoin)
   SYNC_REQUEST:           'sync_request',
   SYNC_STATE:             'sync_state',
+  // Chess-Matics simultaneous challenge
+  MATICS_START:           'matics:start',
+  MATICS_WIN:             'matics:win',
+  MATICS_RESULT:          'matics:result',
 } as const

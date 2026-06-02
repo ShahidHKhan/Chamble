@@ -7,10 +7,12 @@ import { EVENTS } from '@chess/shared'
 import { useChessGame, type GameMode, type GameSnapshot, type SyncState } from '../hooks/useChessGame'
 import { useClock } from '../hooks/useClock'
 import { useBlackjack } from '../hooks/useBlackjack'
+import { useChessMatics, type MaticsResult } from '../hooks/useChessMatics'
 import { PlayerBar } from '../components/PlayerBar'
 import { MoveHistory } from '../components/MoveHistory'
 import { GameControls, type PauseState } from '../components/GameControls'
 import { BlackjackTable } from '../components/BlackjackTable'
+import { MaticsPanel } from '../components/MaticsPanel'
 import '../game.css'
 
 type PieceDropArgs  = { sourceSquare: string; targetSquare: string | null }
@@ -29,7 +31,10 @@ const PROMOTION_PIECES_BLACK: typeof PROMOTION_PIECES = [
   { symbol: '♞', piece: 'n', label: 'Knight' },
 ]
 
-function statusMessage(snapshot: GameSnapshot, mode: GameMode, pauseState: PauseState, bjActive: boolean): string {
+type GameVariant = 'chess21' | 'chessmatics'
+
+function statusMessage(snapshot: GameSnapshot, mode: GameMode, pauseState: PauseState, bjActive: boolean, maticsActive: boolean): string {
+  if (maticsActive) return 'Math Challenge in progress…'
   if (bjActive) return 'Blackjack in progress…'
   if (pauseState === 'paused') return 'Game paused'
   const { status, winner, turn, isCheck } = snapshot
@@ -51,12 +56,13 @@ function statusMessage(snapshot: GameSnapshot, mode: GameMode, pauseState: Pause
 export function GamePage() {
   const location    = useLocation()
   const navigate    = useNavigate()
-  const locState    = (location.state ?? {}) as { mode?: GameMode; color?: Color; opponent?: string; gameId?: string; isRejoin?: boolean }
+  const locState    = (location.state ?? {}) as { mode?: GameMode; color?: Color; opponent?: string; gameId?: string; isRejoin?: boolean; gameVariant?: GameVariant }
   const initialMode: GameMode = locState.mode ?? 'local'
   const playerColor: Color    = locState.color ?? 'w'
   const opponentName: string  = locState.opponent ?? (initialMode === 'computer' ? 'Computer' : 'Opponent')
-  const gameId   = locState.gameId  ?? ''
-  const isRejoin = locState.isRejoin ?? false
+  const gameId      = locState.gameId      ?? ''
+  const isRejoin    = locState.isRejoin    ?? false
+  const gameVariant = locState.gameVariant ?? 'chess21'
 
   // The player whose pieces are at the BOTTOM of the board (always the local player's perspective)
   const bottomColor: Color = playerColor
@@ -74,9 +80,18 @@ export function GamePage() {
   const [pauseOfferedBy, setPauseOfferedBy] = useState<'w' | 'b' | null>(null)
   const isPaused = pauseState === 'paused'
 
-  const [pendingPromo,   setPendingPromo]   = useState<{ from: Square; to: Square } | null>(null)
-  const [pendingCapture, setPendingCapture] = useState<{ from: Square; to: Square } | null>(null)
-  const [captureLabels,  setCaptureLabels]  = useState({ attacker: '', defender: '' })
+  const [pendingPromo,        setPendingPromo]        = useState<{ from: Square; to: Square } | null>(null)
+  const [pendingCapture,      setPendingCapture]      = useState<{ from: Square; to: Square } | null>(null)
+  const [captureLabels,       setCaptureLabels]       = useState({ attacker: '', defender: '' })
+
+  // Chess-Matics state
+  const [pendingMaticsCapture, setPendingMaticsCapture] = useState<{ from: Square; to: Square } | null>(null)
+  const [pendingMaticsPromo,   setPendingMaticsPromo]   = useState<{ from: Square; to: Square } | null>(null)
+  const [maticsLabels,         setMaticsLabels]         = useState({ attacker: '', defender: '' })
+  // true = local client is the attacker for this challenge
+  const [maticsIsAttacker,     setMaticsIsAttacker]     = useState(true)
+  // multiplayer: answer submitted, waiting for server MATICS_RESULT
+  const [maticsAnswered,       setMaticsAnswered]       = useState(false)
 
   // Click-to-move state
   const [selectedSquare,  setSelectedSquare]  = useState<Square | null>(null)
@@ -88,10 +103,12 @@ export function GamePage() {
     exportState, restoreState,
   } = useChessGame(mode, isPaused, playerColor)
   const { times, active, setActive, isExpired, expiredColor } = useClock(600_000)
-  const bj = useBlackjack()
+  const bj     = useBlackjack()
+  const matics = useChessMatics()
 
-  const bjActive   = bj.phase !== 'idle'
-  const isGameOver = snapshot.status !== 'playing'
+  const bjActive     = bj.phase !== 'idle'
+  const maticsActive = gameVariant === 'chessmatics' && matics.phase !== 'idle'
+  const isGameOver   = snapshot.status !== 'playing'
 
   // Resize observer
   useEffect(() => {
@@ -104,9 +121,9 @@ export function GamePage() {
 
   // Clock
   useEffect(() => {
-    if (snapshot.status !== 'playing' || isPaused || bjActive) { setActive(null); return }
+    if (snapshot.status !== 'playing' || isPaused || bjActive || maticsActive) { setActive(null); return }
     setActive(snapshot.turn)
-  }, [snapshot.turn, snapshot.status, isPaused, bjActive, setActive])
+  }, [snapshot.turn, snapshot.status, isPaused, bjActive, maticsActive, setActive])
 
   // Timeout
   useEffect(() => {
@@ -251,6 +268,93 @@ export function GamePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bj.phase, bj.result, pendingCapture])
 
+  // Auto-apply matics result 1.5 s after resolved
+  useEffect(() => {
+    if (matics.phase !== 'resolved' || matics.result === null) return
+    if (!pendingMaticsCapture && !pendingMaticsPromo) return
+    const result: MaticsResult = matics.result
+    // In multiplayer the defender's client just clears pending state and waits for
+    // the attacker's MOVE event — the attacker is the one who emits the move.
+    const defenderSide = mode === 'multiplayer' && !maticsIsAttacker
+
+    if (pendingMaticsCapture) {
+      const { from, to } = pendingMaticsCapture
+      const timer = setTimeout(() => {
+        setPendingMaticsCapture(null)
+        setMaticsAnswered(false)
+        matics.reset()
+        if (defenderSide) return   // attacker's client will emit the MOVE
+        if (result === 'attacker-wins') {
+          makeMove(from, to, 'q')
+          emitMove({ kind: 'move', from, to, promotion: 'q' })
+        } else {
+          captureReversed(from)
+          emitMove({ kind: 'capture_reversed', from })
+        }
+      }, 1500)
+      return () => clearTimeout(timer)
+    }
+
+    if (pendingMaticsPromo) {
+      const { from, to } = pendingMaticsPromo
+      const timer = setTimeout(() => {
+        setPendingMaticsPromo(null)
+        setMaticsAnswered(false)
+        matics.reset()
+        if (defenderSide) return   // attacker's client drives this
+        if (result === 'attacker-wins') {
+          setPendingPromo({ from, to })
+        } else {
+          captureReversed(from)
+          emitMove({ kind: 'capture_reversed', from })
+        }
+      }, 1500)
+      return () => clearTimeout(timer)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matics.phase, matics.result, pendingMaticsCapture, pendingMaticsPromo, mode, maticsIsAttacker])
+
+  // Computer defends math challenge: random delay + 55 % chance of a correct answer
+  // If wrong, nothing happens — the player must answer to proceed
+  useEffect(() => {
+    if (gameVariant !== 'chessmatics' || mode !== 'computer' || matics.phase !== 'question') return
+    const delay   = 1500 + Math.random() * 3500
+    const correct = Math.random() < 0.55
+    const timer = setTimeout(() => { if (correct) matics.resolveAs('defender-wins') }, delay)
+    return () => clearTimeout(timer)
+  }, [gameVariant, mode, matics.phase, matics.resolveAs])
+
+  // Multiplayer: opponent (defender) receives MATICS_START → show same problem
+  useEffect(() => {
+    if (mode !== 'multiplayer' || gameVariant !== 'chessmatics') return
+    const onMaticsStart = ({ from, to, kind }: { from: string; to: string; kind: string }) => {
+      const colorName = (c: 'w' | 'b') => c === 'w' ? 'White' : 'Black'
+      // snapshot.turn is the attacker's color at the moment they triggered the challenge
+      setMaticsLabels({
+        attacker: `${colorName(snapshot.turn)}'s piece`,
+        defender: kind === 'capture' ? `${colorName(snapshot.turn === 'w' ? 'b' : 'w')}'s piece` : 'Promotion square',
+      })
+      setMaticsIsAttacker(false)
+      setMaticsAnswered(false)
+      if (kind === 'capture') setPendingMaticsCapture({ from: from as Square, to: to as Square })
+      else                    setPendingMaticsPromo({ from: from as Square, to: to as Square })
+      matics.start(`${from}${to}`)
+    }
+    socket.on(EVENTS.MATICS_START, onMaticsStart)
+    return () => { socket.off(EVENTS.MATICS_START, onMaticsStart) }
+  }, [mode, gameVariant, snapshot.turn, matics])
+
+  // Multiplayer: server declares winner → resolve matics on both clients
+  useEffect(() => {
+    if (mode !== 'multiplayer' || gameVariant !== 'chessmatics') return
+    const onMaticsResult = ({ winner }: { winner: 'attacker' | 'defender' }) => {
+      matics.resolveAs(winner === 'attacker' ? 'attacker-wins' : 'defender-wins')
+    }
+    socket.on(EVENTS.MATICS_RESULT, onMaticsResult)
+    return () => { socket.off(EVENTS.MATICS_RESULT, onMaticsResult) }
+  }, [mode, gameVariant, matics])
+
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   const triggerCapture = useCallback((from: Square, to: Square) => {
@@ -262,6 +366,21 @@ export function GamePage() {
     setPendingCapture({ from, to })
     bj.deal()
   }, [snapshot.turn, bj])
+
+  const triggerMatics = useCallback((from: Square, to: Square, kind: 'capture' | 'promotion') => {
+    const colorName = (c: 'w' | 'b') => c === 'w' ? 'White' : 'Black'
+    setMaticsLabels({
+      attacker: `${colorName(snapshot.turn)}'s piece`,
+      defender: kind === 'capture' ? `${colorName(snapshot.turn === 'w' ? 'b' : 'w')}'s piece` : 'Promotion square',
+    })
+    setMaticsIsAttacker(true)
+    setMaticsAnswered(false)
+    if (kind === 'capture') setPendingMaticsCapture({ from, to })
+    else                    setPendingMaticsPromo({ from, to })
+    matics.start(`${from}${to}`)
+    // Notify opponent so they see the challenge at the same time
+    emitToGame(EVENTS.MATICS_START, { from, to, kind })
+  }, [snapshot.turn, matics, emitToGame])
 
   // ── Event handlers ─────────────────────────────────────────────────────────
 
@@ -306,19 +425,24 @@ export function GamePage() {
 
   // Drag-to-move
   const handlePieceDrop = useCallback(({ sourceSquare, targetSquare }: PieceDropArgs): boolean => {
-    if (!isPlayerTurn || isPaused || bjActive || !targetSquare) return false
+    if (!isPlayerTurn || isPaused || bjActive || maticsActive || !targetSquare) return false
     const from = sourceSquare as Square
     const to   = targetSquare as Square
-    if (isCapture(from, to))      { triggerCapture(from, to); return false }
-    if (isPawnPromotion(from, to)) { setPendingPromo({ from, to }); return false }
+    if (gameVariant === 'chessmatics') {
+      if (isCapture(from, to))       { triggerMatics(from, to, 'capture');   return false }
+      if (isPawnPromotion(from, to)) { triggerMatics(from, to, 'promotion'); return false }
+    } else {
+      if (isCapture(from, to))       { triggerCapture(from, to); return false }
+      if (isPawnPromotion(from, to)) { setPendingPromo({ from, to }); return false }
+    }
     const moved = makeMove(from, to)
     if (moved) emitMove({ kind: 'move', from, to })
     return moved
-  }, [makeMove, emitMove, isPlayerTurn, isPaused, bjActive, isPawnPromotion, isCapture, triggerCapture])
+  }, [makeMove, emitMove, isPlayerTurn, isPaused, bjActive, maticsActive, gameVariant, isPawnPromotion, isCapture, triggerCapture, triggerMatics])
 
   // Click-to-move
   const handleSquareClick = useCallback(({ square }: SquareClickArgs) => {
-    if (!isPlayerTurn || isPaused || bjActive || isGameOver) return
+    if (!isPlayerTurn || isPaused || bjActive || maticsActive || isGameOver) return
     const sq = square as Square
 
     // Clicking the already-selected piece deselects it
@@ -331,8 +455,13 @@ export function GamePage() {
       const from = selectedSquare
       const to   = sq
       setSelectedSquare(null); setMoveHighlights({})
-      if (isCapture(from, to))       { triggerCapture(from, to); return }
-      if (isPawnPromotion(from, to)) { setPendingPromo({ from, to }); return }
+      if (gameVariant === 'chessmatics') {
+        if (isCapture(from, to))       { triggerMatics(from, to, 'capture');   return }
+        if (isPawnPromotion(from, to)) { triggerMatics(from, to, 'promotion'); return }
+      } else {
+        if (isCapture(from, to))       { triggerCapture(from, to); return }
+        if (isPawnPromotion(from, to)) { setPendingPromo({ from, to }); return }
+      }
       const moved = makeMove(from, to)
       if (moved) emitMove({ kind: 'move', from, to })
       return
@@ -353,8 +482,8 @@ export function GamePage() {
     }
     setMoveHighlights(highlights)
   }, [
-    selectedSquare, moveHighlights, isPlayerTurn, isPaused, bjActive, isGameOver,
-    legalMovesFrom, isCapture, isPawnPromotion, makeMove, triggerCapture, emitMove,
+    selectedSquare, moveHighlights, isPlayerTurn, isPaused, bjActive, maticsActive, isGameOver, gameVariant,
+    legalMovesFrom, isCapture, isPawnPromotion, makeMove, triggerCapture, triggerMatics, emitMove,
   ])
 
   const handlePromotion = useCallback((piece: PieceSymbol) => {
@@ -369,17 +498,18 @@ export function GamePage() {
 
   const squareStyles = { ...lastMoveHighlights(snapshot), ...moveHighlights }
 
-  const boardLocked = !isPlayerTurn || isGameOver || isPaused || !!pendingPromo || bjActive
+  const boardLocked = !isPlayerTurn || isGameOver || isPaused || !!pendingPromo || bjActive || maticsActive
 
   // In multiplayer the player who offered the pause can't accept their own offer
   const canRespondToPause = mode !== 'multiplayer' || pauseOfferedBy !== playerColor
 
   const msgClass = [
     'game-status',
-    isGameOver                                                 ? 'game-status--over'   : '',
-    isPaused                                                   ? 'game-status--paused' : '',
-    bjActive                                                   ? 'game-status--bj'     : '',
-    snapshot.isCheck && !isGameOver && !isPaused && !bjActive  ? 'game-status--check'  : '',
+    isGameOver                                                                  ? 'game-status--over'    : '',
+    isPaused                                                                    ? 'game-status--paused'  : '',
+    bjActive                                                                    ? 'game-status--bj'      : '',
+    maticsActive                                                                ? 'game-status--matics'  : '',
+    snapshot.isCheck && !isGameOver && !isPaused && !bjActive && !maticsActive  ? 'game-status--check'   : '',
   ].filter(Boolean).join(' ')
 
   const promoOptions = snapshot.turn === 'w' ? PROMOTION_PIECES : PROMOTION_PIECES_BLACK
@@ -392,19 +522,45 @@ export function GamePage() {
 
       <main className="game-main">
 
-        {/* Blackjack panel — always visible on the left, dimmed when idle */}
-        <div className={`bj-panel${bjActive ? '' : ' bj-panel--idle'}`}>
-          <BlackjackTable
-            phase={bj.phase}
-            playerHand={bj.playerHand}
-            dealerHand={bj.dealerHand}
-            result={bj.result}
-            attackerLabel={captureLabels.attacker}
-            defenderLabel={captureLabels.defender}
-            onHit={bj.hit}
-            onStand={bj.stand}
-          />
-        </div>
+        {/* Left panel: Blackjack (Chess 21) or Math Challenge (Chess-Matics) */}
+        {gameVariant === 'chess21' ? (
+          <div className={`bj-panel${bjActive ? '' : ' bj-panel--idle'}`}>
+            <BlackjackTable
+              phase={bj.phase}
+              playerHand={bj.playerHand}
+              dealerHand={bj.dealerHand}
+              result={bj.result}
+              attackerLabel={captureLabels.attacker}
+              defenderLabel={captureLabels.defender}
+              onHit={bj.hit}
+              onStand={bj.stand}
+            />
+          </div>
+        ) : (
+          <div className={`matics-panel-wrapper${maticsActive ? '' : ' matics-panel-wrapper--idle'}`}>
+            <MaticsPanel
+              phase={matics.phase}
+              problem={matics.problem}
+              result={matics.result}
+              attackerLabel={maticsLabels.attacker}
+              defenderLabel={maticsLabels.defender}
+              isLocal={mode === 'local'}
+              clientRole={maticsIsAttacker ? 'attacker' : 'defender'}
+              answered={maticsAnswered}
+              onSubmitAs={(value, role) => {
+                if (mode === 'multiplayer') {
+                  // Check locally without resolving — server is the arbiter
+                  if (matics.problem && value === matics.problem.answer && !maticsAnswered) {
+                    setMaticsAnswered(true)
+                    emitToGame(EVENTS.MATICS_WIN, { role })
+                  }
+                } else {
+                  matics.submitAnswerAs(value, role)
+                }
+              }}
+            />
+          </div>
+        )}
 
         {/* Chessboard */}
         <div className="board-section" ref={boardContainerRef}>
@@ -435,6 +591,9 @@ export function GamePage() {
             {bjActive && bj.phase !== 'resolved' && !isPaused && (
               <div className="board-pause-overlay board-pause-overlay--bj"><span>Blackjack</span></div>
             )}
+            {maticsActive && matics.phase !== 'resolved' && !isPaused && (
+              <div className="board-pause-overlay board-pause-overlay--matics"><span>Math Challenge</span></div>
+            )}
             {pendingPromo && (
               <div className="promotion-overlay">
                 <div className="promotion-dialog">
@@ -462,7 +621,7 @@ export function GamePage() {
 
         {/* Right sidebar */}
         <div className="game-sidebar">
-          <div className={msgClass}>{statusMessage(snapshot, mode, pauseState, bjActive)}</div>
+          <div className={msgClass}>{statusMessage(snapshot, mode, pauseState, bjActive, maticsActive)}</div>
           <MoveHistory events={snapshot.gameEvents} />
           <GameControls
             mode={mode}

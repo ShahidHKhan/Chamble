@@ -16,29 +16,24 @@ interface GameStartPayload {
   isRejoin?: boolean
 }
 
-export function Chess21LobbyPage() {
+export function ChessMaticsLobbyPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [view, setView]               = useState<LobbyView>('options')
-  const [roomCode, setRoomCode]       = useState('')
-  const [joinInput, setJoinInput]     = useState('')
-  const [joinError, setJoinError]     = useState('')
+  const [view, setView]                 = useState<LobbyView>('options')
+  const [roomCode, setRoomCode]         = useState('')
+  const [joinInput, setJoinInput]       = useState('')
+  const [joinError, setJoinError]       = useState('')
   const [connectError, setConnectError] = useState(false)
-  // Track whether we navigated into a game so we skip disconnect on unmount.
-  // Disconnecting would assign a new socket ID, losing the server-side room membership.
   const launchedGame = useRef(false)
 
-  // Always start with a fresh connection so stale game-room membership is cleared
   useEffect(() => {
     setConnectError(false)
     socket.disconnect()
     socket.connect()
-
     const onConnectError = () => setConnectError(true)
     const onConnect      = () => setConnectError(false)
     socket.on('connect_error', onConnectError)
     socket.on('connect',       onConnect)
-
     return () => {
       socket.off('connect_error', onConnectError)
       socket.off('connect',       onConnect)
@@ -46,19 +41,17 @@ export function Chess21LobbyPage() {
     }
   }, [])
 
-  // Navigate to game when server signals start
   useEffect(() => {
     const onGameStart = (payload: GameStartPayload) => {
       launchedGame.current = true
       navigate('/play', {
-        state: { mode: 'multiplayer' satisfies GameMode, ...payload },
+        state: { mode: 'multiplayer' satisfies GameMode, gameVariant: 'chessmatics', ...payload },
       })
     }
     socket.on(EVENTS.GAME_START, onGameStart)
     return () => { socket.off(EVENTS.GAME_START, onGameStart) }
   }, [navigate])
 
-  // Room created → show code
   useEffect(() => {
     const onRoomCreated = ({ roomCode: code }: { roomCode: string }) => {
       setRoomCode(code)
@@ -68,24 +61,17 @@ export function Chess21LobbyPage() {
     return () => { socket.off(EVENTS.ROOM_CREATED, onRoomCreated) }
   }, [])
 
-  // Room joined → error or wait for GAME_START
   useEffect(() => {
     const onRoomJoined = ({ error }: { error?: string }) => {
-      if (error) {
-        setJoinError(error)
-        setView('options')
-      }
+      if (error) { setJoinError(error); setView('options') }
     }
     socket.on(EVENTS.ROOM_JOINED, onRoomJoined)
     return () => { socket.off(EVENTS.ROOM_JOINED, onRoomJoined) }
   }, [])
 
   const emitWhenReady = useCallback((event: string, payload: object) => {
-    if (socket.connected) {
-      socket.emit(event, payload)
-    } else {
-      socket.once('connect', () => socket.emit(event, payload))
-    }
+    if (socket.connected) socket.emit(event, payload)
+    else socket.once('connect', () => socket.emit(event, payload))
   }, [])
 
   const handleCreateRoom = useCallback(() => {
@@ -102,10 +88,7 @@ export function Chess21LobbyPage() {
   }, [joinInput, user, emitWhenReady])
 
   const handleCancel = useCallback(() => {
-    setView('options')
-    setRoomCode('')
-    setJoinInput('')
-    setJoinError('')
+    setView('options'); setRoomCode(''); setJoinInput(''); setJoinError('')
   }, [])
 
   return (
@@ -113,8 +96,8 @@ export function Chess21LobbyPage() {
       <Navbar />
       <main className="lobby-main">
         <div className="lobby-header">
-          <h2 className="lobby-title">Chess-21</h2>
-          <p className="lobby-desc">Classic chess with a twist — captures decided by Blackjack.</p>
+          <h2 className="lobby-title">Chess-Matics</h2>
+          <p className="lobby-desc">Chess with a twist — captures and promotions decided by math races.</p>
         </div>
 
         {connectError && (
@@ -123,15 +106,21 @@ export function Chess21LobbyPage() {
 
         {view === 'options' && (
           <div className="lobby-options">
-            <button className="lobby-option" onClick={() => navigate('/play', { state: { mode: 'local' satisfies GameMode } })}>
+            <button
+              className="lobby-option"
+              onClick={() => navigate('/play', { state: { mode: 'local' satisfies GameMode, gameVariant: 'chessmatics' } })}
+            >
               <span className="lobby-option__icon">🎮</span>
               <span className="lobby-option__title">Local 2-Player</span>
-              <span className="lobby-option__desc">Pass-and-play on the same device</span>
+              <span className="lobby-option__desc">Both players race to answer on the same screen</span>
             </button>
-            <button className="lobby-option" onClick={() => navigate('/play', { state: { mode: 'computer' satisfies GameMode } })}>
+            <button
+              className="lobby-option"
+              onClick={() => navigate('/play', { state: { mode: 'computer' satisfies GameMode, gameVariant: 'chessmatics' } })}
+            >
               <span className="lobby-option__icon">🤖</span>
               <span className="lobby-option__title">vs Bot</span>
-              <span className="lobby-option__desc">Play against a random-move bot</span>
+              <span className="lobby-option__desc">Race the computer — it tries to defend after a random delay</span>
             </button>
             <button className="lobby-option" onClick={handleCreateRoom} disabled={connectError}>
               <span className="lobby-option__icon">⊕</span>

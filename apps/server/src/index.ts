@@ -34,6 +34,9 @@ const activeGames  = new Map<string, ActiveGame>() // gameId  → game
 const socketToGame = new Map<string, string>()      // socketId → gameId
 const codeToGame   = new Map<string, string>()      // roomCode → gameId (for rejoin)
 
+// Per-game matics challenge state: prevent double-resolution on simultaneous MATICS_WIN
+const activeMaticsChallenges = new Map<string, { resolved: boolean }>()
+
 function startGame(p1Id: string, p1Name: string, p2Id: string, p2Name: string, code: string) {
   const gameId = `game_${Date.now()}`
   io.sockets.sockets.get(p1Id)?.join(gameId)
@@ -148,6 +151,22 @@ io.on('connection', (socket) => {
   })
   socket.on(EVENTS.SYNC_STATE, ({ gameId, ...state }: { gameId: string; [key: string]: unknown }) => {
     socket.to(gameId).emit(EVENTS.SYNC_STATE, state)
+  })
+
+  // ── Chess-Matics simultaneous challenge ─────────────────────────────────────
+
+  // Attacker emits this; server relays to opponent so both clients start the challenge
+  socket.on(EVENTS.MATICS_START, ({ gameId, from, to, kind }: { gameId: string; from: string; to: string; kind: string }) => {
+    activeMaticsChallenges.set(gameId, { resolved: false })
+    socket.to(gameId).emit(EVENTS.MATICS_START, { from, to, kind })
+  })
+
+  // First correct MATICS_WIN wins; server sends MATICS_RESULT to both clients
+  socket.on(EVENTS.MATICS_WIN, ({ gameId, role }: { gameId: string; role: 'attacker' | 'defender' }) => {
+    const mc = activeMaticsChallenges.get(gameId)
+    if (!mc || mc.resolved) return
+    mc.resolved = true
+    io.to(gameId).emit(EVENTS.MATICS_RESULT, { winner: role })
   })
 
   socket.on('disconnect', () => {

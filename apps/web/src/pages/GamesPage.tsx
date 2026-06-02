@@ -4,31 +4,19 @@ import { Navbar } from '../components/Navbar'
 const GAME_MODES = [
   {
     id: 'chess21',
-    name: 'Chess 21',
-    description: 'Classic chess with a twist. Race to 21 points.',
+    name: 'Chess-21',
+    description: 'Classic chess with a twist — captures decided by Blackjack.',
     icon: '♟',
     available: true,
+    path: '/games/chess21',
   },
   {
-    id: 'blitz',
-    name: 'Blitz Rush',
-    description: '3-minute bullet chess. No time to think.',
-    icon: '⚡',
-    available: false,
-  },
-  {
-    id: 'wager',
-    name: 'Wager Match',
-    description: 'Put something on the line. High stakes chess.',
-    icon: '🎰',
-    available: false,
-  },
-  {
-    id: 'team',
-    name: 'Team Battle',
-    description: '2v2 collaborative chess. Decide moves together.',
-    icon: '⚔',
-    available: false,
+    id: 'chessmatics',
+    name: 'Chess-Matics',
+    description: 'Captures and promotions decided by math races. First correct answer wins.',
+    icon: '∑',
+    available: true,
+    path: '/games/chessmatics',
   },
 ]
 
@@ -45,7 +33,7 @@ export function GamesPage() {
             <button
               key={mode.id}
               className={`game-card${mode.available ? ' game-card--available' : ' game-card--soon'}`}
-              onClick={() => mode.available && navigate('/games/chess21')}
+              onClick={() => mode.available && navigate(mode.path)}
               disabled={!mode.available}
             >
               <span className="game-card__icon">{mode.icon}</span>
