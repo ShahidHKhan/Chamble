@@ -776,6 +776,68 @@
   margin: 0;
 }
 
+/* ── Chess-Roulette wheel picker (lobby) ── */
+.roulette-wheel-picker {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.roulette-wheel-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: var(--sans);
+}
+
+.roulette-wheel-option:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.roulette-wheel-option--active {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.roulette-wheel-option--weighted.roulette-wheel-option--active {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(245, 158, 11, 0.07);
+}
+
+.roulette-wheel-option--balanced.roulette-wheel-option--active {
+  border-color: rgba(34, 197, 94, 0.55);
+  background: rgba(34, 197, 94, 0.07);
+}
+
+.roulette-wheel-option__icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.roulette-wheel-option__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.roulette-wheel-option__desc {
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.65;
+  line-height: 1.4;
+}
+
 .searching-spinner {
   width: 40px;
   height: 40px;

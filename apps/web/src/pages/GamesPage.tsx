@@ -18,6 +18,14 @@ const GAME_MODES = [
     available: true,
     path: '/games/chessmatics',
   },
+  {
+    id: 'chessroulette',
+    name: 'Chess-Roulette',
+    description: 'Spin the wheel each turn — you can only move the piece type you roll.',
+    icon: '🎰',
+    available: true,
+    path: '/games/chessroulette',
+  },
 ]
 
 export function GamesPage() {

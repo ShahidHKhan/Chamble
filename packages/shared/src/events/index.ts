@@ -27,4 +27,7 @@ export const EVENTS = {
   MATICS_START:           'matics:start',
   MATICS_WIN:             'matics:win',
   MATICS_RESULT:          'matics:result',
+  // Chess-Roulette turn events
+  ROULETTE_ROLLED:        'roulette:rolled',
+  ROULETTE_BUST:          'roulette:bust',
 } as const

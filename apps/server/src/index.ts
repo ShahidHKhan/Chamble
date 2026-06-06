@@ -17,7 +17,7 @@ app.get('/health', (_, res) => res.json({ ok: true }))
 
 // ── Matchmaking state ────────────────────────────────────────────────────────
 
-interface RoomEntry { hostSocketId: string; hostUsername: string; wager: number }
+interface RoomEntry { hostSocketId: string; hostUsername: string; wager: number; wheelType?: string }
 
 const privateRooms = new Map<string, RoomEntry>()
 
@@ -28,7 +28,7 @@ function generateRoomCode(): string {
 // ── Active game tracking (for disconnect/reconnect) ──────────────────────────
 
 interface ActivePlayer { socketId: string | null; name: string; color: 'w' | 'b' }
-interface ActiveGame   { gameId: string; code: string; players: [ActivePlayer, ActivePlayer]; wager: number }
+interface ActiveGame   { gameId: string; code: string; players: [ActivePlayer, ActivePlayer]; wager: number; wheelType?: string }
 
 const activeGames  = new Map<string, ActiveGame>() // gameId  → game
 const socketToGame = new Map<string, string>()      // socketId → gameId
@@ -37,13 +37,13 @@ const codeToGame   = new Map<string, string>()      // roomCode → gameId (for 
 // Per-game matics challenge state: prevent double-resolution on simultaneous MATICS_WIN
 const activeMaticsChallenges = new Map<string, { resolved: boolean }>()
 
-function startGame(p1Id: string, p1Name: string, p2Id: string, p2Name: string, code: string, wager: number) {
+function startGame(p1Id: string, p1Name: string, p2Id: string, p2Name: string, code: string, wager: number, wheelType?: string) {
   const gameId = `game_${Date.now()}`
   io.sockets.sockets.get(p1Id)?.join(gameId)
   io.sockets.sockets.get(p2Id)?.join(gameId)
 
   activeGames.set(gameId, {
-    gameId, code, wager,
+    gameId, code, wager, wheelType,
     players: [
       { socketId: p1Id, name: p1Name, color: 'w' },
       { socketId: p2Id, name: p2Name, color: 'b' },
@@ -53,9 +53,9 @@ function startGame(p1Id: string, p1Name: string, p2Id: string, p2Name: string, c
   socketToGame.set(p2Id, gameId)
   codeToGame.set(code, gameId)
 
-  io.to(p1Id).emit(EVENTS.GAME_START, { gameId, color: 'w', opponent: p2Name, wager })
-  io.to(p2Id).emit(EVENTS.GAME_START, { gameId, color: 'b', opponent: p1Name, wager })
-  console.log(`[game] ${p1Name} vs ${p2Name} → ${gameId} (wager: ${wager})`)
+  io.to(p1Id).emit(EVENTS.GAME_START, { gameId, color: 'w', opponent: p2Name, wager, wheelType })
+  io.to(p2Id).emit(EVENTS.GAME_START, { gameId, color: 'b', opponent: p1Name, wager, wheelType })
+  console.log(`[game] ${p1Name} vs ${p2Name} → ${gameId} (wager: ${wager}, wheel: ${wheelType ?? 'weighted'})`)
 }
 
 // ── Socket handlers ──────────────────────────────────────────────────────────
@@ -64,12 +64,12 @@ io.on('connection', (socket) => {
   console.log(`[+] ${socket.id}`)
 
   // Private room: create
-  socket.on(EVENTS.CREATE_ROOM, ({ username, wager = 0 }: { username: string; wager?: number }) => {
+  socket.on(EVENTS.CREATE_ROOM, ({ username, wager = 0, wheelType }: { username: string; wager?: number; wheelType?: string }) => {
     let code = generateRoomCode()
     while (privateRooms.has(code)) code = generateRoomCode()
-    privateRooms.set(code, { hostSocketId: socket.id, hostUsername: username, wager })
+    privateRooms.set(code, { hostSocketId: socket.id, hostUsername: username, wager, wheelType })
     socket.emit(EVENTS.ROOM_CREATED, { roomCode: code })
-    console.log(`[room] ${username} created ${code} (wager: ${wager})`)
+    console.log(`[room] ${username} created ${code} (wager: ${wager}, wheel: ${wheelType ?? 'weighted'})`)
   })
 
   // Private room: join (also handles rejoin for active games)
@@ -100,6 +100,7 @@ io.on('connection', (socket) => {
         opponent: remaining.name,
         isRejoin: true,
         wager: game.wager,
+        wheelType: game.wheelType,
       })
       socket.to(activeGameId).emit(EVENTS.OPPONENT_RECONNECTED)
       console.log(`[rejoin] ${username} rejoined ${activeGameId}`)
@@ -122,7 +123,7 @@ io.on('connection', (socket) => {
     }
     privateRooms.delete(code)
     socket.emit(EVENTS.ROOM_JOINED, {})
-    startGame(room.hostSocketId, room.hostUsername, socket.id, username, code, room.wager)
+    startGame(room.hostSocketId, room.hostUsername, socket.id, username, code, room.wager, room.wheelType)
     console.log(`[room] ${username} joined ${code}`)
   })
 
@@ -156,6 +157,18 @@ io.on('connection', (socket) => {
   })
   socket.on(EVENTS.SYNC_STATE, ({ gameId, ...state }: { gameId: string; [key: string]: unknown }) => {
     socket.to(gameId).emit(EVENTS.SYNC_STATE, state)
+  })
+
+  // ── Chess-Roulette turn relay ────────────────────────────────────────────────
+
+  // Active player spun the wheel → relay result to opponent so they can see it
+  socket.on(EVENTS.ROULETTE_ROLLED, ({ gameId, piece }: { gameId: string; piece: string }) => {
+    socket.to(gameId).emit(EVENTS.ROULETTE_ROLLED, { piece })
+  })
+
+  // Active player's turn busted → relay so opponent knows it's their turn
+  socket.on(EVENTS.ROULETTE_BUST, ({ gameId }: { gameId: string }) => {
+    socket.to(gameId).emit(EVENTS.ROULETTE_BUST)
   })
 
   // ── Chess-Matics simultaneous challenge ─────────────────────────────────────

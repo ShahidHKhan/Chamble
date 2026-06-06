@@ -882,6 +882,278 @@
   font-style: italic;
 }
 
+/* ── Chess-Roulette left panel ── */
+.roulette-panel {
+  width: 280px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  transition: opacity 0.3s;
+}
+
+.roulette-panel--idle {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.roulette-table {
+  background: var(--code-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.roulette-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.roulette-header__title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.roulette-header__sub {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.7;
+  min-height: 16px;
+}
+
+.roulette-wheel-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 2px 7px;
+  border: 1px solid;
+}
+
+.roulette-wheel-badge[data-type="weighted"] {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.roulette-wheel-badge[data-type="balanced"] {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+/* Wheel container + spin animation */
+.roulette-wheel-wrapper {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  padding-top: 10px;
+}
+
+.roulette-wheel-container {
+  position: relative;
+  display: inline-block;
+}
+
+.roulette-wheel-svg--spinning svg {
+  animation: wheel-spin 1.4s cubic-bezier(0.17, 0.67, 0.35, 1) forwards;
+}
+
+.roulette-wheel-svg--landed svg {
+  transform: rotate(var(--land-angle, 0deg));
+  transition: transform 0.4s ease-out;
+}
+
+@keyframes wheel-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(1440deg); }
+}
+
+.roulette-wheel-arrow {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 16px solid var(--accent);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  z-index: 2;
+}
+
+/* Result badge */
+.roulette-result-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.03);
+}
+
+.roulette-result-badge__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  flex: 1;
+}
+
+.roulette-bust-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ef4444;
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.35);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+/* Branch buttons */
+.roulette-branches {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roulette-branch-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-h);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: var(--sans);
+}
+
+.roulette-branch-btn:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.roulette-branch-btn--king:hover {
+  border-color: rgba(255,215,0,0.5);
+  background: rgba(255,215,0,0.06);
+}
+
+.roulette-branch-btn__icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.roulette-branch-btn__label {
+  font-size: 13px;
+  font-weight: 600;
+  display: block;
+}
+
+.roulette-branch-btn__sub {
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.6;
+  display: block;
+}
+
+.roulette-branch-btn > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Moving hint */
+.roulette-moving-hint {
+  font-size: 13px;
+  color: var(--text-h);
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 6px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+}
+
+.roulette-moving-hint__sub {
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.65;
+  margin-top: 3px;
+}
+
+/* Bust notice */
+.roulette-bust-notice {
+  font-size: 12px;
+  color: #ef4444;
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 6px;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+}
+
+/* Probability legend */
+.roulette-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.roulette-legend__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.roulette-legend__row--king {
+  opacity: 0.55;
+}
+
+.roulette-legend__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.roulette-legend__piece {
+  flex: 1;
+  color: var(--text-h);
+}
+
+.roulette-legend__pct {
+  color: var(--text);
+  opacity: 0.7;
+  font-family: var(--mono);
+}
+
+/* Board overlay for roulette */
+.board-pause-overlay--roulette {
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--accent);
+}
+
+/* Status badge for roulette */
+.game-status--roulette {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  font-style: italic;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1100px) {
   .board-section {

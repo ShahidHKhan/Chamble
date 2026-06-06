@@ -80,11 +80,66 @@ function buildSnapshot(
   }
 }
 
+// Checkmate no longer ends the game — the king must be physically captured.
+// Stalemate and other draws still apply.
 function resolveStatus(chess: Chess): { status: GameStatus; winner: Color | null } {
-  if (chess.isCheckmate()) return { status: 'checkmate', winner: chess.turn() === 'w' ? 'b' : 'w' }
   if (chess.isStalemate()) return { status: 'stalemate', winner: null }
-  if (chess.isDraw()) return { status: 'draw', winner: null }
+  if (chess.isDraw())      return { status: 'draw',      winner: null }
   return { status: 'playing', winner: null }
+}
+
+// Returns true if the piece at `from` can physically reach `to` (the opponent's king square).
+// chess.js never lists king captures as legal, so we use a ghost-piece technique:
+// replace the king with a capturable pawn and ask chess.js whether the attacker can take it.
+function canCaptureKingSquare(chess: Chess, from: Square, to: Square): boolean {
+  const attacker = chess.get(from)
+  const target   = chess.get(to)
+  if (!attacker || !target || target.type !== 'k') return false
+  if (attacker.color === target.color) return false
+
+  try {
+    const cloned = new Chess(chess.fen())
+    cloned.remove(to)
+    cloned.put({ type: 'p', color: target.color }, to)
+    const parts = cloned.fen().split(' ')
+    parts[1] = attacker.color   // ensure it's the attacker's turn
+    parts[3] = '-'              // clear en-passant
+    const testChess = new Chess(parts.join(' '))
+    return testChess
+      .moves({ square: from, verbose: true })
+      .some((m: Move) => m.to === to && m.captured)
+  } catch {
+    return false
+  }
+}
+
+// Finds the first piece of `color` that can capture the opponent's king, if any.
+function findKingCapture(chess: Chess, color: Color): { from: Square; to: Square } | null {
+  const oppColor: Color = color === 'w' ? 'b' : 'w'
+  // Locate the opponent's king
+  let kingSq: Square | null = null
+  const board = chess.board()
+  outer: for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c]
+      if (p?.type === 'k' && p.color === oppColor) {
+        kingSq = `${'abcdefgh'[c]}${8 - r}` as Square
+        break outer
+      }
+    }
+  }
+  if (!kingSq) return null
+  // Check every piece of `color`
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c]
+      if (p?.color === color) {
+        const sq = `${'abcdefgh'[c]}${8 - r}` as Square
+        if (canCaptureKingSquare(chess, sq, kingSq)) return { from: sq, to: kingSq }
+      }
+    }
+  }
+  return null
 }
 
 export function useChessGame(mode: GameMode, paused = false, playerColor: Color = 'w') {
@@ -103,6 +158,25 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
   const makeMove = useCallback((from: Square, to: Square, promotion: PieceSymbol = 'q'): boolean => {
     if (statusRef.current !== 'playing') return false
     const chess = chessRef.current
+
+    // King capture: chess.js won't allow this, so we handle it before normal validation.
+    const target = chess.get(to)
+    if (target?.type === 'k' && target.color !== chess.turn()) {
+      if (!canCaptureKingSquare(chess, from, to)) return false
+      const winner = chess.turn()
+      // Log the king capture as a chess event
+      const attacker = chess.get(from)!
+      const san = `${attacker.type.toUpperCase()}x${to}`
+      logRef.current.push({
+        kind: 'chess',
+        move: { from, to, san, color: winner, piece: attacker.type, captured: 'k', flags: 'c' } as unknown as Move,
+      })
+      chess.remove(to)   // physically remove the king so the board reflects it
+      setSnapshot(buildSnapshot(chess, 'checkmate', winner, { from, to }, logRef.current))
+      return true
+    }
+
+    // Normal move
     try {
       const move = chess.move({ from, to, promotion })
       if (!move) return false
@@ -114,6 +188,26 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
       return false
     }
   }, [])
+
+  // Auto-pass the turn when the current player has no legal moves (king-hunt mode).
+  // Traditional checkmate no longer ends the game — instead we pass so the attacker
+  // can physically capture the king on their next turn.
+  useEffect(() => {
+    if (snapshot.status !== 'playing') return
+    const chess = chessRef.current
+    if (chess.moves().length > 0) return
+    // Stalemate should have been caught by resolveStatus already, but guard here too.
+    if (!chess.isCheck()) return
+    // Flip the turn via FEN surgery (same as cancelCapture).
+    const parts = chess.fen().split(' ')
+    const wasTurn = parts[1] as Color
+    parts[1] = wasTurn === 'w' ? 'b' : 'w'
+    parts[3] = '-'
+    parts[4] = String(parseInt(parts[4]) + 1)
+    if (wasTurn === 'b') parts[5] = String(parseInt(parts[5]) + 1)
+    chess.load(parts.join(' '))
+    setSnapshot(buildSnapshot(chess, 'playing', null, snapshotRef.current?.lastMove ?? null, logRef.current))
+  }, [snapshot.turn, snapshot.status])
 
   const resign = useCallback(() => {
     setSnapshot(prev => ({
@@ -138,11 +232,26 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
     setSnapshot(buildSnapshot(chess, 'playing', null, null))
   }, [])
 
-  // Random computer move when it's black's turn in computer mode
+  // Computer move: random legal move, but first check for a king capture opportunity.
   useEffect(() => {
     if (mode !== 'computer' || snapshot.turn !== 'b' || snapshot.status !== 'playing' || paused) return
     const chess = chessRef.current
     const timer = setTimeout(() => {
+      // Prioritise king capture if available
+      const kc = findKingCapture(chess, 'b')
+      if (kc) {
+        // King capture — apply directly (bypasses blackjack/matics for computer)
+        const attacker = chess.get(kc.from)!
+        const san = `${attacker.type.toUpperCase()}x${kc.to}`
+        logRef.current.push({
+          kind: 'chess',
+          move: { from: kc.from, to: kc.to, san, color: 'b', piece: attacker.type, captured: 'k', flags: 'c' } as unknown as Move,
+        })
+        chess.remove(kc.to)
+        setSnapshot(buildSnapshot(chess, 'checkmate', 'b', kc, logRef.current))
+        return
+      }
+      // Otherwise random legal move
       const legal = chess.moves({ verbose: true }) as Move[]
       if (!legal.length) return
       const picked = legal[Math.floor(Math.random() * legal.length)]
@@ -179,7 +288,7 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
     return (chessRef.current.moves({ square, verbose: true }) as Move[]).map(m => m.to as Square)
   }, [])
 
-  // Attacker loses blackjack: log the BJ event, remove attacker's piece, switch turns
+  // Attacker loses blackjack/matics: remove attacker's piece, switch turns
   const captureReversed = useCallback((from: Square) => {
     const chess = chessRef.current
     const attackerPiece = chess.get(from)
@@ -198,7 +307,7 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
     setSnapshot(buildSnapshot(chess, status, winner, null, logRef.current))
   }, [])
 
-  // Push: no pieces move, just switch turns
+  // Push / roulette bust: no pieces move, just switch turns
   const cancelCapture = useCallback(() => {
     const chess = chessRef.current
     const parts = chess.fen().split(' ')

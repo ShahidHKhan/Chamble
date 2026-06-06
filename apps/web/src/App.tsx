@@ -5,8 +5,9 @@ import { LandingPage }      from './pages/LandingPage'
 import { HomePage }         from './pages/HomePage'
 import { ProfilePage }      from './pages/ProfilePage'
 import { GamesPage }        from './pages/GamesPage'
-import { Chess21LobbyPage }     from './pages/Chess21LobbyPage'
-import { ChessMaticsLobbyPage } from './pages/ChessMaticsLobbyPage'
+import { Chess21LobbyPage }       from './pages/Chess21LobbyPage'
+import { ChessMaticsLobbyPage }   from './pages/ChessMaticsLobbyPage'
+import { ChessRouletteLobbyPage } from './pages/ChessRouletteLobbyPage'
 import { GamePage }         from './pages/GamePage'
 
 function Protected({ children }: { children: ReactNode }) {
@@ -27,7 +28,8 @@ function AppRoutes() {
       <Route path="/profile"       element={<Protected><ProfilePage /></Protected>} />
       <Route path="/games"         element={<Protected><GamesPage /></Protected>} />
       <Route path="/games/chess21"      element={<Protected><Chess21LobbyPage /></Protected>} />
-      <Route path="/games/chessmatics" element={<Protected><ChessMaticsLobbyPage /></Protected>} />
+      <Route path="/games/chessmatics"   element={<Protected><ChessMaticsLobbyPage /></Protected>} />
+      <Route path="/games/chessroulette" element={<Protected><ChessRouletteLobbyPage /></Protected>} />
       <Route path="/play"          element={<Protected><GamePage /></Protected>} />
       <Route path="*"              element={<Navigate to="/" replace />} />
     </Routes>
