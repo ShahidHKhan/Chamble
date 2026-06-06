@@ -137,3 +137,10 @@ SUPABASE_SERVICE_KEY=<your-supabase-service-key>
 2. Socket.IO relays events between players and the server.
 3. Redis holds active, in-progress game state.
 4. Supabase stores completed games, users, stats, and ratings.
+
+total = 100
+pawns = 30%
+queen = 10%
+knight = 20%
+bishop = 20%
+rook = 20%

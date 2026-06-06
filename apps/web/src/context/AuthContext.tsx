@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import accountsData from '../data/accounts.json'
 
 export interface User {
   id: string
@@ -14,25 +15,10 @@ interface AuthContextType {
   user: User | null
   login: (username: string, password: string) => { success: boolean; error?: string }
   logout: () => void
+  updateElo: (delta: number) => void
 }
 
-const MOCK_ACCOUNTS: Array<User & { password: string }> = [
-  {
-    id: '1', username: 'demo', password: 'demo',
-    displayName: 'Demo User', elo: 1200,
-    wins: 14, losses: 18, draws: 3,
-  },
-  {
-    id: '2', username: 'magnus', password: 'magnus',
-    displayName: 'Magnus C.', elo: 2847,
-    wins: 312, losses: 44, draws: 89,
-  },
-  {
-    id: '3', username: 'hikaru', password: 'hikaru',
-    displayName: 'Hikaru N.', elo: 2789,
-    wins: 289, losses: 61, draws: 72,
-  },
-]
+const MOCK_ACCOUNTS: Array<User & { password: string }> = accountsData
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
@@ -62,7 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('chamble_user')
   }, [])
 
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>
+  const updateElo = useCallback((delta: number) => {
+    setUser(prev => {
+      if (!prev) return prev
+      const updated = { ...prev, elo: prev.elo + delta }
+      localStorage.setItem('chamble_user', JSON.stringify(updated))
+      return updated
+    })
+  }, [])
+
+  return <AuthContext.Provider value={{ user, login, logout, updateElo }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

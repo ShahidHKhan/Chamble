@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { Chessboard } from 'react-chessboard'
 import type { Square, PieceSymbol, Color } from 'chess.js'
 import { socket } from '../lib/socket'
@@ -56,13 +57,15 @@ function statusMessage(snapshot: GameSnapshot, mode: GameMode, pauseState: Pause
 export function GamePage() {
   const location    = useLocation()
   const navigate    = useNavigate()
-  const locState    = (location.state ?? {}) as { mode?: GameMode; color?: Color; opponent?: string; gameId?: string; isRejoin?: boolean; gameVariant?: GameVariant }
+  const { updateElo } = useAuth()
+  const locState    = (location.state ?? {}) as { mode?: GameMode; color?: Color; opponent?: string; gameId?: string; isRejoin?: boolean; gameVariant?: GameVariant; wager?: number }
   const initialMode: GameMode = locState.mode ?? 'local'
   const playerColor: Color    = locState.color ?? 'w'
   const opponentName: string  = locState.opponent ?? (initialMode === 'computer' ? 'Computer' : 'Opponent')
   const gameId      = locState.gameId      ?? ''
   const isRejoin    = locState.isRejoin    ?? false
   const gameVariant = locState.gameVariant ?? 'chess21'
+  const wager       = locState.wager       ?? 0
 
   // The player whose pieces are at the BOTTOM of the board (always the local player's perspective)
   const bottomColor: Color = playerColor
@@ -238,6 +241,15 @@ export function GamePage() {
   useEffect(() => {
     if (snapshot.status !== 'playing') { setPauseState('none'); setPauseOfferedBy(null) }
   }, [snapshot.status])
+
+  // Apply ELO wager on game over (multiplayer only, once)
+  const eloApplied = useRef(false)
+  useEffect(() => {
+    if (mode !== 'multiplayer' || wager === 0 || snapshot.status === 'playing' || eloApplied.current) return
+    eloApplied.current = true
+    if (snapshot.winner === playerColor) updateElo(wager)
+    else if (snapshot.winner !== null)   updateElo(-wager)
+  }, [snapshot.status, snapshot.winner, mode, wager, playerColor, updateElo])
 
   // Clear selection whenever the turn changes or game ends
   useEffect(() => {
@@ -621,6 +633,12 @@ export function GamePage() {
 
         {/* Right sidebar */}
         <div className="game-sidebar">
+          {mode === 'multiplayer' && wager > 0 && (
+            <div className={`prize-pool${isGameOver ? ' prize-pool--over' : ''}`}>
+              <span className="prize-pool__label">Prize Pool</span>
+              <span className="prize-pool__amount">{wager * 2} ELO</span>
+            </div>
+          )}
           <div className={msgClass}>{statusMessage(snapshot, mode, pauseState, bjActive, maticsActive)}</div>
           <MoveHistory events={snapshot.gameEvents} />
           <GameControls

@@ -17,7 +17,7 @@ app.get('/health', (_, res) => res.json({ ok: true }))
 
 // ── Matchmaking state ────────────────────────────────────────────────────────
 
-interface RoomEntry { hostSocketId: string; hostUsername: string }
+interface RoomEntry { hostSocketId: string; hostUsername: string; wager: number }
 
 const privateRooms = new Map<string, RoomEntry>()
 
@@ -28,7 +28,7 @@ function generateRoomCode(): string {
 // ── Active game tracking (for disconnect/reconnect) ──────────────────────────
 
 interface ActivePlayer { socketId: string | null; name: string; color: 'w' | 'b' }
-interface ActiveGame   { gameId: string; code: string; players: [ActivePlayer, ActivePlayer] }
+interface ActiveGame   { gameId: string; code: string; players: [ActivePlayer, ActivePlayer]; wager: number }
 
 const activeGames  = new Map<string, ActiveGame>() // gameId  → game
 const socketToGame = new Map<string, string>()      // socketId → gameId
@@ -37,13 +37,13 @@ const codeToGame   = new Map<string, string>()      // roomCode → gameId (for 
 // Per-game matics challenge state: prevent double-resolution on simultaneous MATICS_WIN
 const activeMaticsChallenges = new Map<string, { resolved: boolean }>()
 
-function startGame(p1Id: string, p1Name: string, p2Id: string, p2Name: string, code: string) {
+function startGame(p1Id: string, p1Name: string, p2Id: string, p2Name: string, code: string, wager: number) {
   const gameId = `game_${Date.now()}`
   io.sockets.sockets.get(p1Id)?.join(gameId)
   io.sockets.sockets.get(p2Id)?.join(gameId)
 
   activeGames.set(gameId, {
-    gameId, code,
+    gameId, code, wager,
     players: [
       { socketId: p1Id, name: p1Name, color: 'w' },
       { socketId: p2Id, name: p2Name, color: 'b' },
@@ -53,9 +53,9 @@ function startGame(p1Id: string, p1Name: string, p2Id: string, p2Name: string, c
   socketToGame.set(p2Id, gameId)
   codeToGame.set(code, gameId)
 
-  io.to(p1Id).emit(EVENTS.GAME_START, { gameId, color: 'w', opponent: p2Name })
-  io.to(p2Id).emit(EVENTS.GAME_START, { gameId, color: 'b', opponent: p1Name })
-  console.log(`[game] ${p1Name} vs ${p2Name} → ${gameId}`)
+  io.to(p1Id).emit(EVENTS.GAME_START, { gameId, color: 'w', opponent: p2Name, wager })
+  io.to(p2Id).emit(EVENTS.GAME_START, { gameId, color: 'b', opponent: p1Name, wager })
+  console.log(`[game] ${p1Name} vs ${p2Name} → ${gameId} (wager: ${wager})`)
 }
 
 // ── Socket handlers ──────────────────────────────────────────────────────────
@@ -64,16 +64,16 @@ io.on('connection', (socket) => {
   console.log(`[+] ${socket.id}`)
 
   // Private room: create
-  socket.on(EVENTS.CREATE_ROOM, ({ username }: { username: string }) => {
+  socket.on(EVENTS.CREATE_ROOM, ({ username, wager = 0 }: { username: string; wager?: number }) => {
     let code = generateRoomCode()
     while (privateRooms.has(code)) code = generateRoomCode()
-    privateRooms.set(code, { hostSocketId: socket.id, hostUsername: username })
+    privateRooms.set(code, { hostSocketId: socket.id, hostUsername: username, wager })
     socket.emit(EVENTS.ROOM_CREATED, { roomCode: code })
-    console.log(`[room] ${username} created ${code}`)
+    console.log(`[room] ${username} created ${code} (wager: ${wager})`)
   })
 
   // Private room: join (also handles rejoin for active games)
-  socket.on(EVENTS.JOIN_ROOM, ({ username, roomCode }: { username: string; roomCode: string }) => {
+  socket.on(EVENTS.JOIN_ROOM, ({ username, roomCode, elo = 0 }: { username: string; roomCode: string; elo?: number }) => {
     const code = roomCode.toUpperCase()
 
     // ── Rejoin path ──────────────────────────────────────────────────────────
@@ -99,6 +99,7 @@ io.on('connection', (socket) => {
         color: slot.color,
         opponent: remaining.name,
         isRejoin: true,
+        wager: game.wager,
       })
       socket.to(activeGameId).emit(EVENTS.OPPONENT_RECONNECTED)
       console.log(`[rejoin] ${username} rejoined ${activeGameId}`)
@@ -115,9 +116,13 @@ io.on('connection', (socket) => {
       socket.emit(EVENTS.ROOM_JOINED, { error: 'Cannot join your own room' })
       return
     }
+    if (elo < room.wager) {
+      socket.emit(EVENTS.ROOM_JOINED, { error: `This room requires ${room.wager} ELO to join (you have ${elo})` })
+      return
+    }
     privateRooms.delete(code)
     socket.emit(EVENTS.ROOM_JOINED, {})
-    startGame(room.hostSocketId, room.hostUsername, socket.id, username, code)
+    startGame(room.hostSocketId, room.hostUsername, socket.id, username, code, room.wager)
     console.log(`[room] ${username} joined ${code}`)
   })
 

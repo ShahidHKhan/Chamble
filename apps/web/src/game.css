@@ -915,3 +915,41 @@
     padding: 12px 16px;
   }
 }
+
+/* ── Prize Pool ── */
+.prize-pool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  margin-bottom: 8px;
+}
+
+.prize-pool__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 215, 0, 0.7);
+}
+
+.prize-pool__amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffd700;
+  letter-spacing: -0.5px;
+  font-family: var(--heading);
+}
+
+.prize-pool--over .prize-pool__amount {
+  color: #aaa;
+}
+
+.prize-pool--over {
+  border-color: rgba(170, 170, 170, 0.25);
+  background: linear-gradient(135deg, #1a1a1a 0%, #222 100%);
+}

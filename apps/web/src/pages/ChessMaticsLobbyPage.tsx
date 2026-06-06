@@ -7,12 +7,13 @@ import { Navbar } from '../components/Navbar'
 import type { GameMode } from '../hooks/useChessGame'
 import type { Color } from 'chess.js'
 
-type LobbyView = 'options' | 'creating' | 'waiting-for-joiner' | 'joining'
+type LobbyView = 'options' | 'wager-setup' | 'creating' | 'waiting-for-joiner' | 'joining'
 
 interface GameStartPayload {
   gameId: string
   color: Color
   opponent: string
+  wager: number
   isRejoin?: boolean
 }
 
@@ -24,6 +25,9 @@ export function ChessMaticsLobbyPage() {
   const [joinInput, setJoinInput]       = useState('')
   const [joinError, setJoinError]       = useState('')
   const [connectError, setConnectError] = useState(false)
+  const [wager, setWager]               = useState(0)
+  const [wagerInput, setWagerInput]     = useState('0')
+  const [wagerError, setWagerError]     = useState('')
   const launchedGame = useRef(false)
 
   useEffect(() => {
@@ -74,21 +78,35 @@ export function ChessMaticsLobbyPage() {
     else socket.once('connect', () => socket.emit(event, payload))
   }, [])
 
-  const handleCreateRoom = useCallback(() => {
+  const handleOpenWagerSetup = useCallback(() => {
+    setWagerInput('0')
+    setWagerError('')
+    setView('wager-setup')
+  }, [])
+
+  const handleConfirmWager = useCallback(() => {
+    const amount = parseInt(wagerInput, 10)
+    if (isNaN(amount) || amount < 0) { setWagerError('Enter a valid amount (0 or more)'); return }
+    if (amount > (user?.elo ?? 0)) { setWagerError(`You only have ${user?.elo ?? 0} ELO`); return }
+    setWager(amount)
+    setWagerError('')
     setView('creating')
-    emitWhenReady(EVENTS.CREATE_ROOM, { username: user?.displayName ?? 'Player' })
-  }, [user, emitWhenReady])
+    emitWhenReady(EVENTS.CREATE_ROOM, { username: user?.displayName ?? 'Player', wager: amount })
+  }, [wagerInput, user, emitWhenReady])
+
+  const handleCreateRoom = handleConfirmWager
 
   const handleJoinRoom = useCallback(() => {
     const code = joinInput.trim().toUpperCase()
     if (!code) return
     setJoinError('')
     setView('joining')
-    emitWhenReady(EVENTS.JOIN_ROOM, { username: user?.displayName ?? 'Player', roomCode: code })
+    emitWhenReady(EVENTS.JOIN_ROOM, { username: user?.displayName ?? 'Player', roomCode: code, elo: user?.elo ?? 0 })
   }, [joinInput, user, emitWhenReady])
 
   const handleCancel = useCallback(() => {
     setView('options'); setRoomCode(''); setJoinInput(''); setJoinError('')
+    setWager(0); setWagerInput('0'); setWagerError('')
   }, [])
 
   return (
@@ -122,7 +140,7 @@ export function ChessMaticsLobbyPage() {
               <span className="lobby-option__title">vs Bot</span>
               <span className="lobby-option__desc">Race the computer — it tries to defend after a random delay</span>
             </button>
-            <button className="lobby-option" onClick={handleCreateRoom} disabled={connectError}>
+            <button className="lobby-option" onClick={handleOpenWagerSetup} disabled={connectError}>
               <span className="lobby-option__icon">⊕</span>
               <span className="lobby-option__title">Create Room</span>
               <span className="lobby-option__desc">Get a code and share it with a friend — you play as White</span>
@@ -146,6 +164,29 @@ export function ChessMaticsLobbyPage() {
           </div>
         )}
 
+        {view === 'wager-setup' && (
+          <div className="lobby-state">
+            <p className="lobby-state__title">Set ELO Wager</p>
+            <p className="lobby-state__sub">Both players must offer this amount. Winner takes the Prize Pool.</p>
+            <p className="lobby-state__sub">Your ELO: <strong>{user?.elo ?? 0}</strong></p>
+            <input
+              className="form-input"
+              type="number"
+              min={0}
+              max={user?.elo ?? 0}
+              value={wagerInput}
+              onChange={e => { setWagerInput(e.target.value); setWagerError('') }}
+              onKeyDown={e => e.key === 'Enter' && handleConfirmWager()}
+              style={{ width: '120px', textAlign: 'center', fontSize: '1.2rem', margin: '0.75rem 0' }}
+            />
+            {wagerError && <p className="form-error">{wagerError}</p>}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <button className="btn-lobby-join" onClick={handleConfirmWager}>Create Room</button>
+              <button className="btn-cancel" onClick={handleCancel}>Cancel</button>
+            </div>
+          </div>
+        )}
+
         {view === 'creating' && (
           <div className="lobby-state">
             <div className="searching-spinner" aria-label="Creating room" />
@@ -158,6 +199,7 @@ export function ChessMaticsLobbyPage() {
             <p className="lobby-state__title">Room ready — you are White</p>
             <p className="lobby-state__sub">Share this code with your opponent</p>
             <div className="room-code">{roomCode}</div>
+            {wager > 0 && <p className="lobby-state__sub">ELO wager: <strong>{wager}</strong> per player</p>}
             <p className="lobby-state__sub">Waiting for opponent to join…</p>
             <div className="searching-spinner" aria-label="Waiting" />
             <button className="btn-cancel" onClick={handleCancel}>Cancel</button>
