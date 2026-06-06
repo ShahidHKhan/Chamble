@@ -288,7 +288,10 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
     return (chessRef.current.moves({ square, verbose: true }) as Move[]).map(m => m.to as Square)
   }, [])
 
-  // Attacker loses blackjack/matics: remove attacker's piece, switch turns
+  // Attacker loses blackjack/matics: remove attacker's piece, switch turns.
+  // If the attacker was the King, the game ends immediately — chess.js would
+  // reject any FEN that's missing a king, so we must handle this before
+  // attempting to reload the position.
   const captureReversed = useCallback((from: Square) => {
     const chess = chessRef.current
     const attackerPiece = chess.get(from)
@@ -296,6 +299,14 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
       logRef.current.push({ kind: 'bj', piece: attackerPiece.type, loserColor: attackerPiece.color })
     }
     chess.remove(from)
+
+    if (attackerPiece?.type === 'k') {
+      // King was removed — game over, opponent wins
+      const winner: Color = attackerPiece.color === 'w' ? 'b' : 'w'
+      setSnapshot(buildSnapshot(chess, 'checkmate', winner, null, logRef.current))
+      return
+    }
+
     const parts = chess.fen().split(' ')
     const wasTurn = parts[1] as Color
     parts[1] = wasTurn === 'w' ? 'b' : 'w'
