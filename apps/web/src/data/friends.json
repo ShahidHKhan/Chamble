@@ -1,0 +1,6 @@
+[
+  { "id": "f1", "displayName": "Fabiano C.", "elo": 2769, "status": "offline" },
+  { "id": "f2", "displayName": "Ian N.",     "elo": 2798, "status": "online"  },
+  { "id": "f3", "displayName": "Ding L.",    "elo": 2762, "status": "in-game" },
+  { "id": "f4", "displayName": "Alireza F.", "elo": 2759, "status": "offline" }
+]

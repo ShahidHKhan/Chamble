@@ -1,32 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { Navbar } from '../components/Navbar'
+import gameModesData from '../data/gameModes.json'
 
-const GAME_MODES = [
-  {
-    id: 'chess21',
-    name: 'Chess-21',
-    description: 'Classic chess with a twist — captures decided by Blackjack.',
-    icon: '♟',
-    available: true,
-    path: '/games/chess21',
-  },
-  {
-    id: 'chessmatics',
-    name: 'Chess-Matics',
-    description: 'Captures and promotions decided by math races. First correct answer wins.',
-    icon: '∑',
-    available: true,
-    path: '/games/chessmatics',
-  },
-  {
-    id: 'chessroulette',
-    name: 'Chess-Roulette',
-    description: 'Spin the wheel each turn — you can only move the piece type you roll.',
-    icon: '🎰',
-    available: true,
-    path: '/games/chessroulette',
-  },
-]
+interface GameMode { id: string; name: string; description: string; icon: string; available: boolean; path: string }
+
+const GAME_MODES = gameModesData as GameMode[]
 
 export function GamesPage() {
   const navigate = useNavigate()

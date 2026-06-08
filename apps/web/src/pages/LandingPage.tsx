@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import accountsData from '../data/accounts.json'
 
-const QUICK_ACCOUNTS = ['demo', 'magnus', 'hikaru']
+const QUICK_ACCOUNTS = accountsData.map(a => a.username)
 
 export function LandingPage() {
   const [username, setUsername] = useState('')

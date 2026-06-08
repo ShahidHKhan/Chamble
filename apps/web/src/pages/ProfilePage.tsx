@@ -1,19 +1,17 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Navbar } from '../components/Navbar'
+import friendsData from '../data/friends.json'
+import matchesData from '../data/matches.json'
 
-const MOCK_FRIENDS = [
-  { id: 'f1', displayName: 'Fabiano C.', elo: 2769, status: 'offline'  as const },
-  { id: 'f2', displayName: 'Ian N.',     elo: 2798, status: 'online'   as const },
-  { id: 'f3', displayName: 'Ding L.',    elo: 2762, status: 'in-game'  as const },
-  { id: 'f4', displayName: 'Alireza F.', elo: 2759, status: 'offline'  as const },
-]
+type FriendStatus = 'online' | 'offline' | 'in-game'
+type MatchResult  = 'win' | 'loss' | 'draw'
 
-const MOCK_MATCHES = [
-  { id: 'm1', opponent: 'Hikaru N.',   result: 'win'  as const, color: 'White', moves: 42, date: '2026-05-15' },
-  { id: 'm2', opponent: 'Ian N.',      result: 'loss' as const, color: 'Black', moves: 67, date: '2026-05-14' },
-  { id: 'm3', opponent: 'Fabiano C.',  result: 'draw' as const, color: 'White', moves: 89, date: '2026-05-13' },
-]
+interface Friend { id: string; displayName: string; elo: number; status: FriendStatus }
+interface Match  { id: string; opponent: string; result: MatchResult; color: string; moves: number; date: string }
+
+const MOCK_FRIENDS = friendsData as Friend[]
+const MOCK_MATCHES = matchesData as Match[]
 
 const STATUS_LABEL: Record<string, string> = {
   online:  'Online',
