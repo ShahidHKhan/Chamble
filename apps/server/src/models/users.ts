@@ -52,16 +52,15 @@ function fromRow(row: UserRow): User {
   }
 }
 
-function toInsertRow(user: Omit<User, 'id' | 'createdAt'>, passwordHash?: string): TablesInsert<'users'> {
+function toInsertRow(user: Omit<User, 'id' | 'createdAt'>): TablesInsert<'users'> {
   return {
-    username:      user.username,
-    display_name:  user.displayName,
-    elo:           user.elo,
-    wins:          user.wins,
-    losses:        user.losses,
-    draws:         user.draws,
-    role:          user.role,
-    password_hash: passwordHash ?? null,
+    username:     user.username,
+    display_name: user.displayName,
+    elo:          user.elo,
+    wins:         user.wins,
+    losses:       user.losses,
+    draws:        user.draws,
+    role:         user.role,
   }
 }
 
@@ -151,41 +150,17 @@ export async function getByUsername(username: string): Promise<User | null> {
 }
 
 export async function create(
-  input: Omit<User, 'id' | 'createdAt'>,
-  passwordHash?: string,
+  input: Omit<User, 'id' | 'createdAt'>
 ): Promise<User> {
   const db = getSupabase()
   const { data, error } = await db
     .from(TABLE)
-    .insert(toInsertRow(input, passwordHash))
+    .insert(toInsertRow(input))
     .select('*')
     .single()
 
   if (error) throw error
   return fromRow(data as UserRow)
-}
-
-export async function getPasswordHash(id: string): Promise<string | null> {
-  const db = getSupabase()
-  const { data, error } = await db
-    .from(TABLE)
-    .select('password_hash')
-    .eq('id', id)
-    .single()
-
-  if (error) throw error
-  return (data as { password_hash: string | null }).password_hash
-
-}
-
-export async function setPasswordHash(id: string, passwordHash: string): Promise<void> {
-  const db = getSupabase()
-  const { error } = await db
-    .from(TABLE)
-    .update({ password_hash: passwordHash })
-    .eq('id', id)
-
-  if (error) throw error
 }
 
 export async function update(
