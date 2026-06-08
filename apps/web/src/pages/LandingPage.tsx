@@ -1,9 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import accountsData from '../data/accounts.json'
 
-const QUICK_ACCOUNTS = accountsData.map(a => a.username)
+const QUICK_ACCOUNTS = ['demo', 'magnus', 'hikaru']
 
 export function LandingPage() {
   const [username, setUsername] = useState('')
@@ -12,15 +11,15 @@ export function LandingPage() {
   const { login }  = useAuth()
   const navigate   = useNavigate()
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    const result = login(username.trim(), password)
+    const result = await login(username.trim(), password)
     if (result.success) navigate('/home')
     else setError(result.error ?? 'Login failed')
   }
 
-  const quickLogin = (u: string) => {
-    const result = login(u, u)
+  const quickLogin = async (u: string) => {
+    const result = await login(u, u)
     if (result.success) navigate('/home')
   }
 
