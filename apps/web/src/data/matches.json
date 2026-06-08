@@ -1,5 +1,0 @@
-[
-  { "id": "m1", "opponent": "Hikaru N.",  "result": "win",  "color": "White", "moves": 42, "date": "2026-05-15" },
-  { "id": "m2", "opponent": "Ian N.",     "result": "loss", "color": "Black", "moves": 67, "date": "2026-05-14" },
-  { "id": "m3", "opponent": "Fabiano C.", "result": "draw", "color": "White", "moves": 89, "date": "2026-05-13" }
-]

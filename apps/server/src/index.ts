@@ -4,6 +4,11 @@ import { Server } from 'socket.io'
 import cors from 'cors'
 import 'dotenv/config'
 import { EVENTS } from '@chess/shared'
+import { extractUser } from './middleware/auth'
+import authController from './controllers/auth'
+import usersController from './controllers/users'
+import matchesController from './controllers/matches'
+import friendsController from './controllers/friends'
 
 const app  = express()
 const http = createServer(app)
@@ -12,6 +17,13 @@ const PORT = process.env.PORT || 3001
 
 app.use(cors())
 app.use(express.json())
+
+// Auth middleware + REST API routes
+app.use(extractUser)
+app.use('/api/v1/auth', authController)
+app.use('/api/v1/users', usersController)
+app.use('/api/v1/matches', matchesController)
+app.use('/api/v1/friends', friendsController)
 
 app.get('/health', (_, res) => res.json({ ok: true }))
 

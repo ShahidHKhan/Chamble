@@ -1,21 +1,13 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Navbar } from '../components/Navbar'
-import friendsData from '../data/friends.json'
-import matchesData from '../data/matches.json'
-
-type FriendStatus = 'online' | 'offline' | 'in-game'
-type MatchResult  = 'win' | 'loss' | 'draw'
-
-interface Friend { id: string; displayName: string; elo: number; status: FriendStatus }
-interface Match  { id: string; opponent: string; result: MatchResult; color: string; moves: number; date: string }
-
-const MOCK_FRIENDS = friendsData as Friend[]
-const MOCK_MATCHES = matchesData as Match[]
+import { getMatches } from '../services/matches'
+import type { MatchRecord } from '@chess/shared'
 
 const STATUS_LABEL: Record<string, string> = {
-  online:  'Online',
-  offline: 'Offline',
+  online:    'Online',
+  offline:   'Offline',
   'in-game': 'In Game',
 }
 
@@ -26,6 +18,12 @@ const RESULT_LABEL: Record<string, string> = {
 export function ProfilePage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [matches, setMatches] = useState<MatchRecord[]>([])
+
+  useEffect(() => {
+    if (!user) return
+    getMatches(user.id).then(res => setMatches(res.data))
+  }, [user])
 
   if (!user) return null
 
@@ -74,14 +72,16 @@ export function ProfilePage() {
           <section className="profile-section">
             <h3 className="section-title">Recent Matches</h3>
             <div className="match-list">
-              {MOCK_MATCHES.map(m => (
+              {matches.length === 0 ? (
+                <p className="empty-state">No matches yet.</p>
+              ) : matches.map(m => (
                 <div key={m.id} className="match-row">
                   <span className={`match-result match-result--${m.result}`}>
                     {RESULT_LABEL[m.result]}
                   </span>
-                  <span className="match-opponent">vs {m.opponent}</span>
+                  <span className="match-opponent">vs {m.opponentName}</span>
                   <span className="match-meta">{m.color} · {m.moves} moves</span>
-                  <span className="match-date">{m.date}</span>
+                  <span className="match-date">{m.playedAt.slice(0, 10)}</span>
                 </div>
               ))}
             </div>
@@ -91,14 +91,7 @@ export function ProfilePage() {
           <section className="profile-section">
             <h3 className="section-title">Friends</h3>
             <div className="friends-list">
-              {MOCK_FRIENDS.map(f => (
-                <div key={f.id} className="friend-row">
-                  <span className={`friend-status friend-status--${f.status}`} />
-                  <span className="friend-name">{f.displayName}</span>
-                  <span className="friend-elo">{f.elo}</span>
-                  <span className="friend-status-label">{STATUS_LABEL[f.status]}</span>
-                </div>
-              ))}
+              <p className="empty-state">Friends coming soon.</p>
             </div>
           </section>
 
