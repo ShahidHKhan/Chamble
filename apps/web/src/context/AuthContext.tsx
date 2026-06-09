@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from 'react'
 import { api } from '../services/api'
 import type { DataEnvelope, User } from '@chess/shared'
 
@@ -37,6 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Always-current reference so updateElo's stable callback can read the latest user id
+  const userRef = useRef(user)
+  useEffect(() => { userRef.current = user }, [user])
+
   const logout = useCallback(() => {
     setUser(null)
     localStorage.removeItem('chamble_user')
@@ -44,12 +48,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const updateElo = useCallback((delta: number) => {
+    // Optimistic local update
     setUser(prev => {
       if (!prev) return prev
       const updated = { ...prev, elo: prev.elo + delta }
       localStorage.setItem('chamble_user', JSON.stringify(updated))
       return updated
     })
+    // Persist to server; on success replace local state with authoritative value
+    const userId = userRef.current?.id
+    if (userId) {
+      api<DataEnvelope<User>>(`users/${userId}/elo`, { delta }, { method: 'PATCH' })
+        .then(res => {
+          if (res.isSuccess) {
+            setUser(res.data)
+            localStorage.setItem('chamble_user', JSON.stringify(res.data))
+          }
+        })
+        .catch(() => {})
+    }
   }, [])
 
   return <AuthContext.Provider value={{ user, login, logout, updateElo }}>{children}</AuthContext.Provider>

@@ -5,6 +5,7 @@ import { Chessboard } from 'react-chessboard'
 import type { Square, PieceSymbol, Color } from 'chess.js'
 import { socket } from '../lib/socket'
 import { EVENTS } from '@chess/shared'
+import { recordMatch } from '../services/matches'
 import { useChessGame, type GameMode, type GameSnapshot, type SyncState } from '../hooks/useChessGame'
 import { useClock } from '../hooks/useClock'
 import { useBlackjack } from '../hooks/useBlackjack'
@@ -65,7 +66,7 @@ function statusMessage(snapshot: GameSnapshot, mode: GameMode, pauseState: Pause
 export function GamePage() {
   const location    = useLocation()
   const navigate    = useNavigate()
-  const { updateElo } = useAuth()
+  const { user, updateElo } = useAuth()
   const locState    = (location.state ?? {}) as { mode?: GameMode; color?: Color; opponent?: string; gameId?: string; isRejoin?: boolean; gameVariant?: GameVariant; wager?: number; wheelType?: string }
   const initialMode: GameMode = locState.mode ?? 'local'
   const playerColor: Color    = locState.color ?? 'w'
@@ -319,6 +320,27 @@ export function GamePage() {
     if (snapshot.winner === playerColor) updateElo(wager)
     else if (snapshot.winner !== null)   updateElo(-wager)
   }, [snapshot.status, snapshot.winner, mode, wager, playerColor, updateElo])
+
+  // Record the completed match to the database (all modes, once)
+  const matchRecorded = useRef(false)
+  useEffect(() => {
+    if (snapshot.status === 'playing' || matchRecorded.current || !user) return
+    matchRecorded.current = true
+    const result = snapshot.winner === null
+      ? 'draw' as const
+      : snapshot.winner === playerColor
+        ? 'win'  as const
+        : 'loss' as const
+    recordMatch({
+      userId: user.id,
+      opponentName,
+      result,
+      color: playerColor,
+      moves: snapshot.moves.length,
+      gameVariant,
+    }).catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot.status])
 
   // Clear selection whenever the turn changes or game ends
   useEffect(() => {

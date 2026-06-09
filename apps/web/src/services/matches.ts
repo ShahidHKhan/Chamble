@@ -5,6 +5,6 @@ export function getMatches(userId: string) {
   return api<DataListEnvelope<MatchRecord>>(`matches/user/${userId}`)
 }
 
-export function recordMatch(match: Omit<MatchRecord, 'id'>) {
+export function recordMatch(match: Omit<MatchRecord, 'id' | 'playedAt'>) {
   return api<DataEnvelope<MatchRecord>>('matches', match)
 }
