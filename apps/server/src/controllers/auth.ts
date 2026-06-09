@@ -49,16 +49,34 @@ router.post('/register', async (req, res) => {
 })
 
 // POST /api/auth/login
-// Signs in via Supabase Auth and returns the session token + user profile.
+// Accepts { username, password }. Looks up the Supabase Auth email for that
+// username internally so callers never need to know the email address.
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body as { email: string; password: string }
+  const { username, password } = req.body as { username: string; password: string }
 
-  if (!email || !password) {
-    res.status(400).json({ data: null, isSuccess: false, message: 'Email and password are required' })
+  if (!username || !password) {
+    res.status(400).json({ data: null, isSuccess: false, message: 'Username and password are required' })
     return
   }
 
   const db = getSupabase()
+
+  // Step 1: find the profile row so we have the user's UUID
+  const profile = await Users.getByUsername(username).catch(() => null)
+  if (!profile) {
+    res.status(401).json({ data: null, isSuccess: false, message: 'Invalid credentials' })
+    return
+  }
+
+  // Step 2: look up their email in Supabase Auth using the same UUID
+  const { data: authData } = await db.auth.admin.getUserById(profile.id)
+  const email = authData.user?.email
+  if (!email) {
+    res.status(401).json({ data: null, isSuccess: false, message: 'Invalid credentials' })
+    return
+  }
+
+  // Step 3: sign in with the real email + password
   const { data, error } = await db.auth.signInWithPassword({ email, password })
 
   if (error || !data.user) {
@@ -66,15 +84,10 @@ router.post('/login', async (req, res) => {
     return
   }
 
-  try {
-    const user = await Users.getById(data.user.id)
-    res.json({
-      data: { user, token: data.session.access_token },
-      isSuccess: true,
-    })
-  } catch {
-    res.status(500).json({ data: null, isSuccess: false, message: 'Failed to load user profile' })
-  }
+  res.json({
+    data: { user: profile, token: data.session.access_token },
+    isSuccess: true,
+  })
 })
 
 // POST /api/auth/logout  (requires login)
