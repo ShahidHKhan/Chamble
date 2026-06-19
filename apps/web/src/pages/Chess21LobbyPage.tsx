@@ -28,6 +28,8 @@ export function Chess21LobbyPage() {
   const [wager, setWager]             = useState(0)
   const [wagerInput, setWagerInput]   = useState('0')
   const [wagerError, setWagerError]   = useState('')
+  const [timerEnabled, setTimerEnabled] = useState(true)
+  const [timerMinutes, setTimerMinutes] = useState(10)
   // Track whether we navigated into a game so we skip disconnect on unmount.
   // Disconnecting would assign a new socket ID, losing the server-side room membership.
   const launchedGame = useRef(false)
@@ -106,8 +108,8 @@ export function Chess21LobbyPage() {
     setWager(amount)
     setWagerError('')
     setView('creating')
-    emitWhenReady(EVENTS.CREATE_ROOM, { username: user?.displayName ?? 'Player', wager: amount })
-  }, [wagerInput, user, emitWhenReady])
+    emitWhenReady(EVENTS.CREATE_ROOM, { username: user?.displayName ?? 'Player', wager: amount, timerEnabled, timerMs: timerMinutes * 60_000, gameVariant: 'chess21' })
+  }, [wagerInput, user, timerEnabled, timerMinutes, emitWhenReady])
 
   const handleCreateRoom = handleConfirmWager
 
@@ -116,7 +118,7 @@ export function Chess21LobbyPage() {
     if (!code) return
     setJoinError('')
     setView('joining')
-    emitWhenReady(EVENTS.JOIN_ROOM, { username: user?.displayName ?? 'Player', roomCode: code, elo: user?.elo ?? 0 })
+    emitWhenReady(EVENTS.JOIN_ROOM, { username: user?.displayName ?? 'Player', roomCode: code, elo: user?.elo ?? 0, gameVariant: 'chess21' })
   }, [joinInput, user, emitWhenReady])
 
   const handleCancel = useCallback(() => {
@@ -127,6 +129,8 @@ export function Chess21LobbyPage() {
     setWager(0)
     setWagerInput('0')
     setWagerError('')
+    setTimerEnabled(true)
+    setTimerMinutes(10)
   }, [])
 
   return (
@@ -180,9 +184,10 @@ export function Chess21LobbyPage() {
 
         {view === 'wager-setup' && (
           <div className="lobby-state">
-            <p className="lobby-state__title">Set ELO Wager</p>
-            <p className="lobby-state__sub">Both players must offer this amount. Winner takes the Prize Pool.</p>
-            <p className="lobby-state__sub">Your ELO: <strong>{user?.elo ?? 0}</strong></p>
+            <p className="lobby-state__title">Room Setup</p>
+
+            <p className="lobby-state__sub" style={{ marginTop: '0.25rem' }}>ELO Wager</p>
+            <p className="lobby-state__sub">Winner takes the Prize Pool. Your ELO: <strong>{user?.elo ?? 0}</strong></p>
             <input
               className="form-input"
               type="number"
@@ -191,10 +196,24 @@ export function Chess21LobbyPage() {
               value={wagerInput}
               onChange={e => { setWagerInput(e.target.value); setWagerError('') }}
               onKeyDown={e => e.key === 'Enter' && handleConfirmWager()}
-              style={{ width: '120px', textAlign: 'center', fontSize: '1.2rem', margin: '0.75rem 0' }}
+              style={{ width: '120px', textAlign: 'center', fontSize: '1.2rem', margin: '0.5rem 0' }}
             />
             {wagerError && <p className="form-error">{wagerError}</p>}
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+
+            <div className="lobby-divider" style={{ margin: '0.75rem 0' }}>Timer</div>
+            <div className="lobby-toggle-row">
+              <button className={`lobby-toggle-btn${timerEnabled ? ' lobby-toggle-btn--active' : ''}`} onClick={() => setTimerEnabled(true)}>On</button>
+              <button className={`lobby-toggle-btn${!timerEnabled ? ' lobby-toggle-btn--active' : ''}`} onClick={() => setTimerEnabled(false)}>Off</button>
+            </div>
+            {timerEnabled && (
+              <div className="lobby-toggle-row" style={{ marginTop: '0.5rem' }}>
+                {[10, 30].map(m => (
+                  <button key={m} className={`lobby-toggle-btn${timerMinutes === m ? ' lobby-toggle-btn--active' : ''}`} onClick={() => setTimerMinutes(m)}>{m} min</button>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
               <button className="btn-lobby-join" onClick={handleConfirmWager}>Create Room</button>
               <button className="btn-cancel" onClick={handleCancel}>Cancel</button>
             </div>

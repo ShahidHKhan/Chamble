@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import { getSupabase } from '../lib/supabase'
+import jwt from 'jsonwebtoken'
 import * as Users from '../models/users'
 
 // Augment Express Request so req.userId / req.userEmail are typed everywhere
@@ -7,23 +7,24 @@ declare global {
   namespace Express {
     interface Request {
       userId?: string
-      userEmail?: string
     }
   }
 }
 
 // Runs on every request — attaches user if token present
-export async function extractUser(req: Request, _res: Response, next: NextFunction) {
+export function extractUser(req: Request, _res: Response, next: NextFunction) {
   const token = req.headers.authorization?.replace('Bearer ', '')
   if (!token) return next()
 
-  const db = getSupabase()
-  const { data, error } = await db.auth.getUser(token)
+  const secret = process.env.JWT_SECRET
+  if (!secret) return next()
 
-  if (error || !data.user) return next()
-
-  req.userId    = data.user.id
-  req.userEmail = data.user.email
+  try {
+    const decoded = jwt.verify(token, secret) as { sub: string }
+    req.userId = decoded.sub
+  } catch {
+    // invalid or expired token — proceed without user
+  }
   next()
 }
 

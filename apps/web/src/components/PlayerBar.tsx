@@ -18,13 +18,14 @@ interface Props {
   captured: PieceSymbol[]
   isGameOver: boolean
   disconnected?: boolean
+  timerEnabled?: boolean
 }
 
-export function PlayerBar({ color, name, timeMs, isActive, captured, isGameOver, disconnected }: Props) {
+export function PlayerBar({ color, name, timeMs, isActive, captured, isGameOver, disconnected, timerEnabled = true }: Props) {
   const sorted = [...captured].sort((a, b) => PIECE_VALUES[a] - PIECE_VALUES[b])
   // Pieces this player captured are opponent's color
   const glyphs = color === 'w' ? PIECE_GLYPHS.black : PIECE_GLYPHS.white
-  const isLow = timeMs > 0 && timeMs < 30_000 && !isGameOver
+  const isLow = timerEnabled && timeMs > 0 && timeMs < 30_000 && !isGameOver
 
   return (
     <div className={`player-bar${isActive ? ' player-bar--active' : ''}`}>
@@ -39,7 +40,7 @@ export function PlayerBar({ color, name, timeMs, isActive, captured, isGameOver,
         </span>
       </div>
       <div className={`player-bar__clock${isActive ? ' player-bar__clock--active' : ''}${isLow ? ' player-bar__clock--low' : ''}`}>
-        {formatTime(timeMs)}
+        {timerEnabled ? formatTime(timeMs) : '--:--'}
       </div>
     </div>
   )

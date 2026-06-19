@@ -31,6 +31,8 @@ export function ChessRouletteLobbyPage() {
   const [wagerInput, setWagerInput]     = useState('0')
   const [wagerError, setWagerError]     = useState('')
   const [wheelType, setWheelType]       = useState<WheelType>('weighted')
+  const [timerEnabled, setTimerEnabled] = useState(true)
+  const [timerMinutes, setTimerMinutes] = useState(10)
   // mode pending wheel selection (local or computer)
   const pendingMode = useRef<'local' | 'computer' | null>(null)
   const launchedGame = useRef(false)
@@ -102,20 +104,21 @@ export function ChessRouletteLobbyPage() {
     setWager(amount)
     setWagerError('')
     setView('creating')
-    emitWhenReady(EVENTS.CREATE_ROOM, { username: user?.displayName ?? 'Player', wager: amount, wheelType })
-  }, [wagerInput, user, wheelType, emitWhenReady])
+    emitWhenReady(EVENTS.CREATE_ROOM, { username: user?.displayName ?? 'Player', wager: amount, wheelType, timerEnabled, timerMs: timerMinutes * 60_000, gameVariant: 'chessroulette' })
+  }, [wagerInput, user, wheelType, timerEnabled, timerMinutes, emitWhenReady])
 
   const handleJoinRoom = useCallback(() => {
     const code = joinInput.trim().toUpperCase()
     if (!code) return
     setJoinError('')
     setView('joining')
-    emitWhenReady(EVENTS.JOIN_ROOM, { username: user?.displayName ?? 'Player', roomCode: code, elo: user?.elo ?? 0 })
+    emitWhenReady(EVENTS.JOIN_ROOM, { username: user?.displayName ?? 'Player', roomCode: code, elo: user?.elo ?? 0, gameVariant: 'chessroulette' })
   }, [joinInput, user, emitWhenReady])
 
   const handleCancel = useCallback(() => {
     setView('options'); setRoomCode(''); setJoinInput(''); setJoinError('')
     setWager(0); setWagerInput('0'); setWagerError(''); setWheelType('weighted')
+    setTimerEnabled(true); setTimerMinutes(10)
   }, [])
 
   const handleSelectWheel = useCallback((type: WheelType) => {
@@ -247,6 +250,19 @@ export function ChessRouletteLobbyPage() {
                 <span className="roulette-wheel-option__desc">All five piece types — equal 20% chance each</span>
               </button>
             </div>
+
+            <div className="lobby-divider" style={{ margin: '0.75rem 0' }}>Timer</div>
+            <div className="lobby-toggle-row">
+              <button className={`lobby-toggle-btn${timerEnabled ? ' lobby-toggle-btn--active' : ''}`} onClick={() => setTimerEnabled(true)}>On</button>
+              <button className={`lobby-toggle-btn${!timerEnabled ? ' lobby-toggle-btn--active' : ''}`} onClick={() => setTimerEnabled(false)}>Off</button>
+            </div>
+            {timerEnabled && (
+              <div className="lobby-toggle-row" style={{ marginTop: '0.5rem' }}>
+                {[10, 30].map(m => (
+                  <button key={m} className={`lobby-toggle-btn${timerMinutes === m ? ' lobby-toggle-btn--active' : ''}`} onClick={() => setTimerMinutes(m)}>{m} min</button>
+                ))}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
               <button className="btn-lobby-join" onClick={handleConfirmWager}>Create Room</button>

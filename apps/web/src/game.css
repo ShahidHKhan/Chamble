@@ -956,6 +956,22 @@
   padding-top: 10px;
 }
 
+.roulette-wheel-wrapper--spinnable {
+  cursor: pointer;
+  border-radius: 50%;
+  transition: transform 0.15s ease, filter 0.15s ease;
+  pointer-events: auto;
+}
+
+.roulette-wheel-wrapper--spinnable:hover {
+  transform: scale(1.04);
+  filter: brightness(1.12);
+}
+
+.roulette-wheel-wrapper--spinnable:active {
+  transform: scale(0.97);
+}
+
 .roulette-wheel-container {
   position: relative;
   display: inline-block;

@@ -810,6 +810,35 @@
   background: var(--accent-bg);
 }
 
+.lobby-toggle-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.lobby-toggle-btn {
+  padding: 0.35rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.lobby-toggle-btn:hover {
+  border-color: var(--accent-border);
+  color: var(--text);
+}
+
+.lobby-toggle-btn--active {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--text);
+}
+
 .roulette-wheel-option--weighted.roulette-wheel-option--active {
   border-color: rgba(245, 158, 11, 0.55);
   background: rgba(245, 158, 11, 0.07);

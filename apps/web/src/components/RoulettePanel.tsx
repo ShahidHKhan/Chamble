@@ -23,14 +23,11 @@ const SEGMENT_COLORS: Record<PieceSymbol, string> = {
 interface WheelProps {
   spinning: boolean
   result: PieceSymbol | null
+  segments: [PieceSymbol, number][]
 }
 
-const SEGMENTS: [PieceSymbol, number][] = [
-  ['p', 30], ['n', 20], ['b', 20], ['r', 20], ['q', 10],
-]
-
 // Builds SVG pie-chart wheel segments from weights.
-function WheelSVG({ spinning, result }: WheelProps) {
+function WheelSVG({ spinning, result, segments }: WheelProps) {
   const cx = 80
   const cy = 80
   const r  = 72
@@ -38,7 +35,7 @@ function WheelSVG({ spinning, result }: WheelProps) {
   // Build slices
   const slices: { piece: PieceSymbol; startAngle: number; endAngle: number }[] = []
   let cumulative = 0
-  for (const [piece, weight] of SEGMENTS) {
+  for (const [piece, weight] of segments) {
     const startAngle = (cumulative / 100) * 360 - 90
     cumulative += weight
     const endAngle = (cumulative / 100) * 360 - 90
@@ -122,6 +119,7 @@ interface Props {
   opponentRolled: PieceSymbol | null
   isPlayerTurn: boolean
   wheelType: WheelType
+  onSpin: () => void
   onChooseBranch: (branch: RouletteBranch) => void
 }
 
@@ -132,6 +130,7 @@ export function RoulettePanel({
   opponentRolled,
   isPlayerTurn,
   wheelType,
+  onSpin,
   onChooseBranch,
 }: Props) {
   const isIdle = phase === 'idle'
@@ -149,23 +148,31 @@ export function RoulettePanel({
           </div>
           <span className="roulette-header__sub">
             {isPlayerTurn
-              ? phase === 'idle'    ? 'Waiting for your turn…'
+              ? phase === 'idle'    ? 'Click the wheel to spin!'
               : phase === 'spinning'? 'Spinning the wheel…'
               : phase === 'choosing'? 'Choose your branch'
               : phase === 'moving'  ? `Move a ${rolledPiece ? pieceName(rolledPiece) : ''}`
               : 'Turn busted!'
               : opponentRolled
               ? `Opponent rolled: ${pieceName(opponentRolled)}`
-              : 'Opponent is spinning…'
+              : 'Waiting for opponent to spin…'
             }
           </span>
         </div>
 
-        {/* Wheel */}
-        <div className="roulette-wheel-wrapper">
+        {/* Wheel — clickable to spin when it's the player's idle turn */}
+        <div
+          className={`roulette-wheel-wrapper${isPlayerTurn && phase === 'idle' ? ' roulette-wheel-wrapper--spinnable' : ''}`}
+          onClick={isPlayerTurn && phase === 'idle' ? onSpin : undefined}
+          role={isPlayerTurn && phase === 'idle' ? 'button' : undefined}
+          tabIndex={isPlayerTurn && phase === 'idle' ? 0 : undefined}
+          onKeyDown={isPlayerTurn && phase === 'idle' ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSpin() } } : undefined}
+          aria-label={isPlayerTurn && phase === 'idle' ? 'Spin the wheel' : undefined}
+        >
           <WheelSVG
             spinning={phase === 'spinning'}
             result={isPlayerTurn ? rolledPiece : opponentRolled}
+            segments={activeSegments}
           />
         </div>
 

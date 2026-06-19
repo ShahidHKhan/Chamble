@@ -171,6 +171,26 @@ export function findKingCaptureMove(
   return null
 }
 
+// Checks if the piece at `from` can capture the opponent king.
+// Returns the king's square if reachable, null otherwise.
+export function kingCaptureTargetFrom(chess: Chess, from: Square, actingColor: Color): Square | null {
+  const oppColor: Color = actingColor === 'w' ? 'b' : 'w'
+  const kingSq = kingSquareOf(chess, oppColor)
+  if (!kingSq) return null
+  const piece = chess.get(from)
+  if (!piece || piece.color !== actingColor) return null
+
+  const cloned = new Chess(chess.fen())
+  cloned.remove(kingSq)
+  cloned.put({ type: 'p', color: oppColor }, kingSq)
+  const parts = cloned.fen().split(' ')
+  parts[1] = actingColor
+  parts[3] = '-'
+  const testChess = new Chess(parts.join(' '))
+  const moves = testChess.moves({ square: from, verbose: true }) as import('chess.js').Move[]
+  return moves.some(m => m.to === kingSq && m.captured) ? kingSq : null
+}
+
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 const IDLE: RouletteState = {
