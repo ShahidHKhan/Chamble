@@ -30,4 +30,7 @@ export const EVENTS = {
   // Chess-Roulette turn events
   ROULETTE_ROLLED:        'roulette:rolled',
   ROULETTE_BUST:          'roulette:bust',
+  // In-game chat
+  CHAT_MESSAGE:           'chat:message',
+  CHAT_RECEIVE:           'chat:receive',
 } as const

@@ -49,6 +49,11 @@ const codeToGame   = new Map<string, string>()      // roomCode → gameId (for 
 // Per-game matics challenge state: prevent double-resolution on simultaneous MATICS_WIN
 const activeMaticsChallenges = new Map<string, { resolved: boolean }>()
 
+// Per-socket chat rate limiting: max 4 messages per 8 seconds
+const chatRateLimits = new Map<string, number[]>()
+const CHAT_WINDOW_MS  = 8_000
+const CHAT_MAX_MSGS   = 4
+
 function startGame(p1Id: string, p1Name: string, p2Id: string, p2Name: string, code: string, wager: number, wheelType?: string, timerEnabled = true, timerMs = 600_000, gameVariant = 'chess21') {
   const gameId = `game_${Date.now()}`
   io.sockets.sockets.get(p1Id)?.join(gameId)
@@ -189,6 +194,24 @@ io.on('connection', (socket) => {
     socket.to(gameId).emit(EVENTS.ROULETTE_BUST)
   })
 
+  // ── In-game chat ────────────────────────────────────────────────────────────
+
+  socket.on(EVENTS.CHAT_MESSAGE, ({ gameId, text }: { gameId: string; text: string }) => {
+    if (typeof text !== 'string') return
+    const trimmed = text.trim().slice(0, 200)
+    if (!trimmed) return
+
+    const now   = Date.now()
+    const times = (chatRateLimits.get(socket.id) ?? []).filter(t => now - t < CHAT_WINDOW_MS)
+    if (times.length >= CHAT_MAX_MSGS) return  // silently drop spam
+    times.push(now)
+    chatRateLimits.set(socket.id, times)
+
+    const game   = activeGames.get(gameId)
+    const sender = game?.players.find(p => p.socketId === socket.id)?.name ?? 'Unknown'
+    socket.to(gameId).emit(EVENTS.CHAT_RECEIVE, { text: trimmed, sender })
+  })
+
   // ── Chess-Matics simultaneous challenge ─────────────────────────────────────
 
   // Attacker emits this; server relays to opponent so both clients start the challenge
@@ -234,6 +257,7 @@ io.on('connection', (socket) => {
       socketToGame.delete(socket.id)
     }
 
+    chatRateLimits.delete(socket.id)
     console.log(`[-] ${socket.id}`)
   })
 })

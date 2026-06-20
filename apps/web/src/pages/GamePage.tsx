@@ -19,6 +19,7 @@ import { GameControls, type PauseState } from '../components/GameControls'
 import { BlackjackTable } from '../components/BlackjackTable'
 import { MaticsPanel } from '../components/MaticsPanel'
 import { RoulettePanel } from '../components/RoulettePanel'
+import { ChatBox, type ChatMessage } from '../components/ChatBox'
 import '../game.css'
 
 type PieceDropArgs  = { sourceSquare: string; targetSquare: string | null }
@@ -91,6 +92,9 @@ export function GamePage() {
   const [isSyncing,            setIsSyncing]            = useState(isRejoin)
   const [boardWidth, setBoardWidth] = useState(480)
   const boardContainerRef = useRef<HTMLDivElement>(null)
+
+  const [chatMessages,   setChatMessages]   = useState<ChatMessage[]>([])
+  const chatIdRef = useRef(0)
 
   const [pauseState,     setPauseState]     = useState<PauseState>('none')
   const [pauseOfferedBy, setPauseOfferedBy] = useState<'w' | 'b' | null>(null)
@@ -467,6 +471,21 @@ export function GamePage() {
   }, [mode, gameVariant, roulette, cancelCapture])
 
 
+  // Chat: receive opponent messages
+  useEffect(() => {
+    if (mode !== 'multiplayer') return
+    const onChatReceive = ({ text, sender }: { text: string; sender: string }) => {
+      setChatMessages(prev => [...prev, { id: ++chatIdRef.current, sender, text, isSelf: false }])
+    }
+    socket.on(EVENTS.CHAT_RECEIVE, onChatReceive)
+    return () => { socket.off(EVENTS.CHAT_RECEIVE, onChatReceive) }
+  }, [mode])
+
+  const handleSendChat = useCallback((text: string) => {
+    emitToGame(EVENTS.CHAT_MESSAGE, { text })
+    setChatMessages(prev => [...prev, { id: ++chatIdRef.current, sender: 'You', text, isSelf: true }])
+  }, [emitToGame])
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   const triggerCapture = useCallback((from: Square, to: Square) => {
@@ -706,63 +725,71 @@ export function GamePage() {
 
       <main className="game-main">
 
-        {/* Left panel: Blackjack / Math Challenge / Roulette */}
-        {gameVariant === 'chess21' ? (
-          <div className={`bj-panel${bjActive ? '' : ' bj-panel--idle'}`}>
-            <BlackjackTable
-              phase={bj.phase}
-              playerHand={bj.playerHand}
-              dealerHand={bj.dealerHand}
-              result={bj.result}
-              attackerLabel={captureLabels.attacker}
-              defenderLabel={captureLabels.defender}
-              onHit={bj.hit}
-              onStand={bj.stand}
-            />
-          </div>
-        ) : gameVariant === 'chessmatics' ? (
-          <div className={`matics-panel-wrapper${maticsActive ? '' : ' matics-panel-wrapper--idle'}`}>
-            <MaticsPanel
-              phase={matics.phase}
-              problem={matics.problem}
-              result={matics.result}
-              attackerLabel={maticsLabels.attacker}
-              defenderLabel={maticsLabels.defender}
-              isLocal={mode === 'local'}
-              clientRole={maticsIsAttacker ? 'attacker' : 'defender'}
-              answered={maticsAnswered}
-              onSubmitAs={(value, role) => {
-                if (mode === 'multiplayer') {
-                  if (matics.problem && value === matics.problem.answer && !maticsAnswered) {
-                    setMaticsAnswered(true)
-                    emitToGame(EVENTS.MATICS_WIN, { role })
+        {/* Left column: game variant panel + chat */}
+        <div className="left-column">
+          {gameVariant === 'chess21' ? (
+            <div className={`bj-panel${bjActive ? '' : ' bj-panel--idle'}`}>
+              <BlackjackTable
+                phase={bj.phase}
+                playerHand={bj.playerHand}
+                dealerHand={bj.dealerHand}
+                result={bj.result}
+                attackerLabel={captureLabels.attacker}
+                defenderLabel={captureLabels.defender}
+                onHit={bj.hit}
+                onStand={bj.stand}
+              />
+            </div>
+          ) : gameVariant === 'chessmatics' ? (
+            <div className={`matics-panel-wrapper${maticsActive ? '' : ' matics-panel-wrapper--idle'}`}>
+              <MaticsPanel
+                phase={matics.phase}
+                problem={matics.problem}
+                result={matics.result}
+                attackerLabel={maticsLabels.attacker}
+                defenderLabel={maticsLabels.defender}
+                isLocal={mode === 'local'}
+                clientRole={maticsIsAttacker ? 'attacker' : 'defender'}
+                answered={maticsAnswered}
+                onSubmitAs={(value, role) => {
+                  if (mode === 'multiplayer') {
+                    if (matics.problem && value === matics.problem.answer && !maticsAnswered) {
+                      setMaticsAnswered(true)
+                      emitToGame(EVENTS.MATICS_WIN, { role })
+                    }
+                  } else {
+                    matics.submitAnswerAs(value, role)
                   }
-                } else {
-                  matics.submitAnswerAs(value, role)
-                }
+                }}
+              />
+            </div>
+          ) : (
+            <RoulettePanel
+              phase={roulette.phase}
+              rolledPiece={roulette.rolledPiece}
+              chosenBranch={roulette.chosenBranch}
+              opponentRolled={roulette.opponentRolled}
+              isPlayerTurn={isPlayerTurn}
+              wheelType={wheelType}
+              kingHasMoves={roulette.kingHasMoves}
+              onSpin={() => {
+                if (snapshot.status !== 'playing' || isPaused) return
+                const chess = new Chess(snapshot.fen)
+                roulette.startTurn(chess, snapshot.turn, wheelType)
+              }}
+              onChooseBranch={(branch: RouletteBranch) => {
+                const chess = new Chess(snapshot.fen)
+                roulette.chooseBranch(branch, chess, snapshot.turn)
               }}
             />
-          </div>
-        ) : (
-          <RoulettePanel
-            phase={roulette.phase}
-            rolledPiece={roulette.rolledPiece}
-            chosenBranch={roulette.chosenBranch}
-            opponentRolled={roulette.opponentRolled}
-            isPlayerTurn={isPlayerTurn}
-            wheelType={wheelType}
-            kingHasMoves={roulette.kingHasMoves}
-            onSpin={() => {
-              if (snapshot.status !== 'playing' || isPaused) return
-              const chess = new Chess(snapshot.fen)
-              roulette.startTurn(chess, snapshot.turn, wheelType)
-            }}
-            onChooseBranch={(branch: RouletteBranch) => {
-              const chess = new Chess(snapshot.fen)
-              roulette.chooseBranch(branch, chess, snapshot.turn)
-            }}
+          )}
+
+          <ChatBox
+            isActive={mode === 'multiplayer'}
+            messages={chatMessages}
+            onSend={handleSendChat}
           />
-        )}
+        </div>
 
         {/* Chessboard */}
         <div className="board-section" ref={boardContainerRef}>
