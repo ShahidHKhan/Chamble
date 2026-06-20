@@ -496,7 +496,13 @@
 .match-list {
   display: flex;
   flex-direction: column;
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
+.match-list::-webkit-scrollbar { width: 4px; }
+.match-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 .match-row {
   display: grid;
@@ -528,7 +534,13 @@
 .friends-list {
   display: flex;
   flex-direction: column;
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
+.friends-list::-webkit-scrollbar { width: 4px; }
+.friends-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 .friend-row {
   display: grid;
@@ -566,6 +578,8 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 24px;
 }
 
@@ -574,12 +588,16 @@
   font-size: 22px;
   font-weight: 600;
   color: var(--text-h);
+  text-align: center;
+  width: 100%;
 }
 
 .games-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 16px;
+  width: 100%;
 }
 
 .game-card {
@@ -596,6 +614,8 @@
   cursor: pointer;
   transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
   font-family: var(--sans);
+  width: 240px;
+  flex-shrink: 0;
 }
 
 .game-card--available:hover {
@@ -837,6 +857,29 @@
   border-color: var(--accent-border);
   background: var(--accent-bg);
   color: var(--text);
+}
+
+/* ── Setup section card ── */
+.setup-card {
+  width: 100%;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.setup-card__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  opacity: 0.6;
+  align-self: flex-start;
 }
 
 .roulette-wheel-option--weighted.roulette-wheel-option--active {

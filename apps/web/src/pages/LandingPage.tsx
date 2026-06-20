@@ -44,7 +44,7 @@ export function LandingPage() {
       <div className="landing__modal" role="dialog" aria-label="Sign in">
         <div className="login-modal__header">
           <div className="login-modal__logo">Chamble</div>
-          <p className="login-modal__tagline">Chess. Reimagined.</p>
+          <p className="login-modal__tagline">Chess + Gamble</p>
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>

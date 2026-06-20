@@ -154,7 +154,7 @@ export function Chess21LobbyPage() {
               <span className="lobby-option__desc">Play against a random-move bot</span>
             </button>
             <button className="lobby-option" onClick={handleOpenWagerSetup} disabled={connectError}>
-              <span className="lobby-option__icon">⊕</span>
+              <span className="lobby-option__icon">👥</span>
               <span className="lobby-option__title">Create Room</span>
               <span className="lobby-option__desc">Get a code and share it with a friend — you play as White</span>
             </button>
@@ -181,34 +181,38 @@ export function Chess21LobbyPage() {
           <div className="lobby-state">
             <p className="lobby-state__title">Room Setup</p>
 
-            <p className="lobby-state__sub" style={{ marginTop: '0.25rem' }}>ELO Wager</p>
-            <p className="lobby-state__sub">Winner takes the Prize Pool. Your ELO: <strong>{user?.elo ?? 0}</strong></p>
-            <input
-              className="form-input"
-              type="number"
-              min={0}
-              max={user?.elo ?? 0}
-              value={wagerInput}
-              onChange={e => { setWagerInput(e.target.value); setWagerError('') }}
-              onKeyDown={e => e.key === 'Enter' && handleConfirmWager()}
-              style={{ width: '120px', textAlign: 'center', fontSize: '1.2rem', margin: '0.5rem 0' }}
-            />
-            {wagerError && <p className="form-error">{wagerError}</p>}
-
-            <div className="lobby-divider" style={{ margin: '0.75rem 0' }}>Timer</div>
-            <div className="lobby-toggle-row">
-              <button className={`lobby-toggle-btn${timerEnabled ? ' lobby-toggle-btn--active' : ''}`} onClick={() => setTimerEnabled(true)}>On</button>
-              <button className={`lobby-toggle-btn${!timerEnabled ? ' lobby-toggle-btn--active' : ''}`} onClick={() => setTimerEnabled(false)}>Off</button>
+            <div className="setup-card">
+              <span className="setup-card__label">ELO Wager</span>
+              <p className="lobby-state__sub">Winner takes the Prize Pool. Your ELO: <strong>{user?.elo ?? 0}</strong></p>
+              <input
+                className="form-input"
+                type="number"
+                min={0}
+                max={user?.elo ?? 0}
+                value={wagerInput}
+                onChange={e => { setWagerInput(e.target.value); setWagerError('') }}
+                onKeyDown={e => e.key === 'Enter' && handleConfirmWager()}
+                style={{ width: '120px', textAlign: 'center', fontSize: '1.2rem' }}
+              />
+              {wagerError && <p className="form-error">{wagerError}</p>}
             </div>
-            {timerEnabled && (
-              <div className="lobby-toggle-row" style={{ marginTop: '0.5rem' }}>
-                {[10, 30].map(m => (
-                  <button key={m} className={`lobby-toggle-btn${timerMinutes === m ? ' lobby-toggle-btn--active' : ''}`} onClick={() => setTimerMinutes(m)}>{m} min</button>
-                ))}
-              </div>
-            )}
 
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
+            <div className="setup-card">
+              <span className="setup-card__label">Timer</span>
+              <div className="lobby-toggle-row">
+                <button className={`lobby-toggle-btn${timerEnabled ? ' lobby-toggle-btn--active' : ''}`} onClick={() => setTimerEnabled(true)}>On</button>
+                <button className={`lobby-toggle-btn${!timerEnabled ? ' lobby-toggle-btn--active' : ''}`} onClick={() => setTimerEnabled(false)}>Off</button>
+              </div>
+              {timerEnabled && (
+                <div className="lobby-toggle-row">
+                  {[10, 30].map(m => (
+                    <button key={m} className={`lobby-toggle-btn${timerMinutes === m ? ' lobby-toggle-btn--active' : ''}`} onClick={() => setTimerMinutes(m)}>{m} min</button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button className="btn-lobby-join" onClick={handleConfirmWager}>Create Room</button>
               <button className="btn-cancel" onClick={handleCancel}>Cancel</button>
             </div>

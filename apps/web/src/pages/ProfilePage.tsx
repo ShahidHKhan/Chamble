@@ -74,7 +74,7 @@ export function ProfilePage() {
             <div className="match-list">
               {matches.length === 0 ? (
                 <p className="empty-state">No matches yet.</p>
-              ) : matches.map(m => (
+              ) : matches.slice(0, 15).map(m => (
                 <div key={m.id} className="match-row">
                   <span className={`match-result match-result--${m.result}`}>
                     {RESULT_LABEL[m.result]}

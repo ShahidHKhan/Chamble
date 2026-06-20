@@ -136,7 +136,7 @@ export function ChessMaticsLobbyPage() {
               <span className="lobby-option__desc">Race the computer — it tries to defend after a random delay</span>
             </button>
             <button className="lobby-option" onClick={handleOpenWagerSetup} disabled={connectError}>
-              <span className="lobby-option__icon">⊕</span>
+              <span className="lobby-option__icon">👥</span>
               <span className="lobby-option__title">Create Room</span>
               <span className="lobby-option__desc">Get a code and share it with a friend — you play as White</span>
             </button>
