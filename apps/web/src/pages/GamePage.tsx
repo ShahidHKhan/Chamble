@@ -40,14 +40,15 @@ const PROMOTION_PIECES_BLACK: typeof PROMOTION_PIECES = [
 type GameVariant = 'chess21' | 'chessmatics' | 'chessroulette'
 
 function statusMessage(snapshot: GameSnapshot, mode: GameMode, pauseState: PauseState, bjActive: boolean, maticsActive: boolean, roulettePhase?: string): string {
+  const { isCheck } = snapshot
   if (maticsActive) return 'Math Challenge in progress…'
   if (bjActive) return 'Blackjack in progress…'
-  if (roulettePhase === 'spinning')  return 'Spinning the wheel…'
-  if (roulettePhase === 'choosing')  return 'Choose your branch'
-  if (roulettePhase === 'moving')    return 'Make your move'
+  if (roulettePhase === 'spinning')  return isCheck ? 'In check — spinning the wheel…'  : 'Spinning the wheel…'
+  if (roulettePhase === 'choosing')  return isCheck ? 'In check — choose your branch'    : 'Choose your branch'
+  if (roulettePhase === 'moving')    return isCheck ? 'In check — make your move'         : 'Make your move'
   if (roulettePhase === 'bust')      return 'Turn busted — opponent to move'
   if (pauseState === 'paused') return 'Game paused'
-  const { status, winner, turn, isCheck } = snapshot
+  const { status, winner, turn } = snapshot
   const winnerName = winner === 'w' ? 'White' : winner === 'b' ? 'Black' : null
   switch (status) {
     case 'checkmate': return `${winnerName} wins — King captured!`
@@ -691,8 +692,8 @@ export function GamePage() {
     isPaused                                                                                      ? 'game-status--paused'    : '',
     bjActive                                                                                      ? 'game-status--bj'        : '',
     maticsActive                                                                                  ? 'game-status--matics'    : '',
-    rouletteActive                                                                                ? 'game-status--roulette'  : '',
-    snapshot.isCheck && !isGameOver && !isPaused && !bjActive && !maticsActive && !rouletteActive ? 'game-status--check'     : '',
+    rouletteActive && !snapshot.isCheck                                                          ? 'game-status--roulette'  : '',
+    snapshot.isCheck && !isGameOver && !isPaused && !bjActive && !maticsActive                    ? 'game-status--check'     : '',
   ].filter(Boolean).join(' ')
 
   const promoOptions = snapshot.turn === 'w' ? PROMOTION_PIECES : PROMOTION_PIECES_BLACK
@@ -750,6 +751,7 @@ export function GamePage() {
             opponentRolled={roulette.opponentRolled}
             isPlayerTurn={isPlayerTurn}
             wheelType={wheelType}
+            kingHasMoves={roulette.kingHasMoves}
             onSpin={() => {
               if (snapshot.status !== 'playing' || isPaused) return
               const chess = new Chess(snapshot.fen)

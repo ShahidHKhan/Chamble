@@ -129,14 +129,6 @@ export function ChessMaticsLobbyPage() {
           <div className="lobby-options">
             <button
               className="lobby-option"
-              onClick={() => navigate('/play', { state: { mode: 'local' satisfies GameMode, gameVariant: 'chessmatics' } })}
-            >
-              <span className="lobby-option__icon">🎮</span>
-              <span className="lobby-option__title">Local 2-Player</span>
-              <span className="lobby-option__desc">Both players race to answer on the same screen</span>
-            </button>
-            <button
-              className="lobby-option"
               onClick={() => navigate('/play', { state: { mode: 'computer' satisfies GameMode, gameVariant: 'chessmatics' } })}
             >
               <span className="lobby-option__icon">🤖</span>

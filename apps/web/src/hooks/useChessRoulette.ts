@@ -14,6 +14,8 @@ export interface RouletteState {
   validFromSquares: Square[]
   // opponent's rolled piece shown on their side during their spin
   opponentRolled: PieceSymbol | null
+  // whether the king branch is available when phase === 'choosing'
+  kingHasMoves: boolean
 }
 
 export const WHEEL_WEIGHTS: Record<WheelType, [PieceSymbol, number][]> = {
@@ -199,6 +201,7 @@ const IDLE: RouletteState = {
   chosenBranch: null,
   validFromSquares: [],
   opponentRolled: null,
+  kingHasMoves: true,
 }
 
 const SPIN_DURATION_MS = 1400
@@ -235,7 +238,7 @@ export function useChessRoulette() {
       }
 
       // Normal: player chooses
-      setState(prev => ({ ...prev, phase: 'choosing' }))
+      setState(prev => ({ ...prev, phase: 'choosing', kingHasMoves: bust.kingHasMoves }))
     }, SPIN_DURATION_MS)
   }, [clearSpin])
 
@@ -271,6 +274,7 @@ export function useChessRoulette() {
     chosenBranch: state.chosenBranch,
     validFromSquares: state.validFromSquares,
     opponentRolled: state.opponentRolled,
+    kingHasMoves: state.kingHasMoves,
     startTurn,
     chooseBranch,
     endTurn,

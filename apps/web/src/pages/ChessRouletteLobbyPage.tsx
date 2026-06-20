@@ -8,7 +8,7 @@ import type { GameMode } from '../hooks/useChessGame'
 import type { WheelType } from '../hooks/useChessRoulette'
 import type { Color } from 'chess.js'
 
-type LobbyView = 'options' | 'local-wheel' | 'computer-wheel' | 'wager-setup' | 'creating' | 'waiting-for-joiner' | 'joining'
+type LobbyView = 'options' | 'computer-wheel' | 'wager-setup' | 'creating' | 'waiting-for-joiner' | 'joining'
 
 interface GameStartPayload {
   gameId: string
@@ -144,14 +144,6 @@ export function ChessRouletteLobbyPage() {
           <div className="lobby-options">
             <button
               className="lobby-option"
-              onClick={() => { pendingMode.current = 'local'; setView('local-wheel') }}
-            >
-              <span className="lobby-option__icon">🎮</span>
-              <span className="lobby-option__title">Local 2-Player</span>
-              <span className="lobby-option__desc">Both players spin and move on the same screen</span>
-            </button>
-            <button
-              className="lobby-option"
               onClick={() => { pendingMode.current = 'computer'; setView('computer-wheel') }}
             >
               <span className="lobby-option__icon">🤖</span>
@@ -183,7 +175,7 @@ export function ChessRouletteLobbyPage() {
         )}
 
         {/* Wheel selection for local / computer modes */}
-        {(view === 'local-wheel' || view === 'computer-wheel') && (
+        {view === 'computer-wheel' && (
           <div className="lobby-state">
             <p className="lobby-state__title">Choose Your Wheel</p>
             <p className="lobby-state__sub">Determines how pieces are distributed on each spin.</p>

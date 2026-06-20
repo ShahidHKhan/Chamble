@@ -119,6 +119,7 @@ interface Props {
   opponentRolled: PieceSymbol | null
   isPlayerTurn: boolean
   wheelType: WheelType
+  kingHasMoves: boolean
   onSpin: () => void
   onChooseBranch: (branch: RouletteBranch) => void
 }
@@ -130,14 +131,16 @@ export function RoulettePanel({
   opponentRolled,
   isPlayerTurn,
   wheelType,
+  kingHasMoves,
   onSpin,
   onChooseBranch,
 }: Props) {
   const isIdle = phase === 'idle'
+  const isSpinReady = isIdle && isPlayerTurn
   const activeSegments = WHEEL_WEIGHTS[wheelType]
 
   return (
-    <div className={`roulette-panel${isIdle ? ' roulette-panel--idle' : ''}`}>
+    <div className={`roulette-panel${isIdle && !isSpinReady ? ' roulette-panel--idle' : ''}${isSpinReady ? ' roulette-panel--spin-ready' : ''}`}>
       <div className="roulette-table">
         <div className="roulette-header">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -201,10 +204,14 @@ export function RoulettePanel({
             <button
               className="roulette-branch-btn roulette-branch-btn--king"
               onClick={() => onChooseBranch('king')}
+              disabled={!kingHasMoves}
+              title={!kingHasMoves ? 'King has no legal moves' : undefined}
             >
               <span className="roulette-branch-btn__icon">♔</span>
               <span className="roulette-branch-btn__label">Play the King</span>
-              <span className="roulette-branch-btn__sub">Forfeit roll, move King</span>
+              <span className="roulette-branch-btn__sub">
+                {kingHasMoves ? 'Forfeit roll, move King' : 'King cannot move'}
+              </span>
             </button>
           </div>
         )}

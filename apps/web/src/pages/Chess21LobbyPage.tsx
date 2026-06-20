@@ -148,11 +148,6 @@ export function Chess21LobbyPage() {
 
         {view === 'options' && (
           <div className="lobby-options">
-            <button className="lobby-option" onClick={() => navigate('/play', { state: { mode: 'local' satisfies GameMode } })}>
-              <span className="lobby-option__icon">🎮</span>
-              <span className="lobby-option__title">Local 2-Player</span>
-              <span className="lobby-option__desc">Pass-and-play on the same device</span>
-            </button>
             <button className="lobby-option" onClick={() => navigate('/play', { state: { mode: 'computer' satisfies GameMode } })}>
               <span className="lobby-option__icon">🤖</span>
               <span className="lobby-option__title">vs Bot</span>

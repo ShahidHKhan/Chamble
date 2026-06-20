@@ -895,6 +895,22 @@
   pointer-events: none;
 }
 
+.roulette-panel--spin-ready {
+  opacity: 1;
+  pointer-events: none; /* wheel wrapper re-enables its own pointer-events */
+}
+
+.roulette-panel--spin-ready .roulette-table {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent), 0 0 18px rgba(255, 200, 80, 0.25);
+  animation: spin-ready-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes spin-ready-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--accent), 0 0 10px rgba(255, 200, 80, 0.15); }
+  50%       { box-shadow: 0 0 0 2px var(--accent), 0 0 24px rgba(255, 200, 80, 0.4); }
+}
+
 .roulette-table {
   background: var(--code-bg);
   border: 1px solid var(--accent-border);
@@ -1065,6 +1081,16 @@
 .roulette-branch-btn--king:hover {
   border-color: rgba(255,215,0,0.5);
   background: rgba(255,215,0,0.06);
+}
+
+.roulette-branch-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.roulette-branch-btn:disabled:hover {
+  border-color: var(--border);
+  background: transparent;
 }
 
 .roulette-branch-btn__icon {
