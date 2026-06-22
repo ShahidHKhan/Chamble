@@ -1,0 +1,1 @@
+2. when enpassant takes place, use blackjack hand function to confirm capture.
