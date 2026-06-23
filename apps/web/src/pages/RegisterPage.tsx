@@ -4,21 +4,34 @@ import { useAuth } from '../context/AuthContext'
 import { Eye, EyeOff } from '../components/icons'
 
 export function RegisterPage() {
-  const [username,    setUsername]    = useState('')
-  const [displayName, setDisplayName] = useState('')
-  const [email,       setEmail]       = useState('')
-  const [password,     setPassword]     = useState('')
-  const [confirm,      setConfirm]      = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [error,        setError]        = useState('')
-  const [loading,      setLoading]      = useState(false)
+  const [username,      setUsername]      = useState('')
+  const [usernameError, setUsernameError] = useState('')
+  const [displayName,   setDisplayName]   = useState('')
+  const [email,         setEmail]         = useState('')
+  const [password,      setPassword]      = useState('')
+  const [confirm,       setConfirm]       = useState('')
+  const [showPassword,  setShowPassword]  = useState(false)
+  const [error,         setError]         = useState('')
+  const [loading,       setLoading]       = useState(false)
 
   const { register } = useAuth()
   const navigate     = useNavigate()
 
+  const RESERVED = new Set(['admin','support','moderator','mod','root','chamble','system','help','staff','official'])
+
+  function validateUsername(value: string): string {
+    if (value.length < 3 || value.length > 20) return 'Must be 3–20 characters'
+    if (!/^[a-zA-Z0-9_]+$/.test(value)) return 'Letters, numbers, and underscores only'
+    if (RESERVED.has(value.toLowerCase())) return 'That username is reserved'
+    return ''
+  }
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
+
+    const uErr = validateUsername(username)
+    if (uErr) { setUsernameError(uErr); return }
 
     if (password !== confirm) {
       setError('Passwords do not match')
@@ -60,15 +73,17 @@ export function RegisterPage() {
             <label className="form-label" htmlFor="username">Username</label>
             <input
               id="username"
-              className="form-input"
+              className={`form-input${usernameError ? ' form-input--error' : ''}`}
               type="text"
               value={username}
-              onChange={e => { setUsername(e.target.value); setError('') }}
+              onChange={e => { setUsername(e.target.value); setUsernameError('') }}
+              onBlur={e => setUsernameError(validateUsername(e.target.value.trim()))}
               placeholder="Choose a username"
               autoComplete="username"
               autoFocus
               required
             />
+            {usernameError && <span className="field-error">{usernameError}</span>}
           </div>
           <div className="form-field">
             <label className="form-label" htmlFor="displayName">Display name</label>
