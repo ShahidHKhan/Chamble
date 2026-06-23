@@ -626,6 +626,12 @@
 
 .match-row:last-child { border-bottom: none; }
 
+a.match-opponent {
+  color: var(--text-h);
+  text-decoration: none;
+}
+a.match-opponent:hover { text-decoration: underline; }
+
 .match-result {
   font-weight: 700;
   font-size: 12px;
@@ -1081,4 +1087,71 @@
   .profile-main, .games-main { padding: 16px; }
   .match-row { grid-template-columns: 44px 1fr; gap: 8px; }
   .match-meta, .match-date { display: none; }
+}
+
+/* ── Toast notifications ──────────────────────────────────────────────────── */
+.toast-stack {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.toast {
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--sans);
+  animation: toast-in 0.2s ease;
+  max-width: 320px;
+}
+
+.toast--success { background: #166534; color: #dcfce7; border: 1px solid #22c55e33; }
+.toast--error   { background: #7f1d1d; color: #fee2e2; border: 1px solid #ef444433; }
+.toast--info    { background: var(--code-bg); color: var(--text-h); border: 1px solid var(--border); }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Resign confirm dialog ────────────────────────────────────────────────── */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.confirm-dialog {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 280px;
+}
+
+.confirm-dialog__text {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-h);
+  font-weight: 500;
+  text-align: center;
+}
+
+.confirm-dialog__btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
 }

@@ -19,6 +19,19 @@ router.get('/', async (req, res) => {
   }
 })
 
+router.get('/by-username/:username', async (req, res) => {
+  try {
+    const user = await Users.getByUsername(req.params.username)
+    if (!user) {
+      res.status(404).json({ data: null, isSuccess: false, message: 'User not found' })
+      return
+    }
+    res.json({ data: user, isSuccess: true })
+  } catch {
+    res.status(404).json({ data: null, isSuccess: false, message: 'User not found' })
+  }
+})
+
 router.get('/:id', async (req, res) => {
   try {
     const user = await Users.getById(req.params.id)

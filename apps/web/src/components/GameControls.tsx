@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { GameMode } from '../hooks/useChessGame'
 
 export type PauseState = 'none' | 'offered' | 'paused'
@@ -7,7 +8,6 @@ interface Props {
   isGameOver: boolean
   pauseState: PauseState
   pauseOfferedBy: 'w' | 'b' | null
-  /** false when the local player is the one who offered the pause (show "waiting" instead of accept/decline) */
   canRespondToPause?: boolean
   onPause: () => void
   onAcceptPause: () => void
@@ -22,6 +22,8 @@ export function GameControls({
   canRespondToPause = true,
   onPause, onAcceptPause, onDeclinePause, onResume, onResign, onGoHome,
 }: Props) {
+  const [confirmingResign, setConfirmingResign] = useState(false)
+
   return (
     <div className="game-controls">
       <div className="game-controls__row">
@@ -40,7 +42,7 @@ export function GameControls({
           {pauseState === 'none' && (
             <>
               <button className="btn btn--secondary" onClick={onPause}>⏸ Pause</button>
-              <button className="btn btn--danger" onClick={onResign}>Resign</button>
+              <button className="btn btn--danger" onClick={() => setConfirmingResign(true)}>Resign</button>
             </>
           )}
 
@@ -63,6 +65,22 @@ export function GameControls({
           {pauseState === 'paused' && (
             <button className="btn btn--primary btn--full" onClick={onResume}>▶ Resume</button>
           )}
+        </div>
+      )}
+
+      {confirmingResign && (
+        <div className="confirm-overlay" onClick={() => setConfirmingResign(false)}>
+          <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+            <p className="confirm-dialog__text">Are you sure you want to resign?</p>
+            <div className="confirm-dialog__btns">
+              <button className="btn btn--danger" onClick={() => { setConfirmingResign(false); onResign() }}>
+                Yes, resign
+              </button>
+              <button className="btn btn--ghost" onClick={() => setConfirmingResign(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

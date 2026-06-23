@@ -215,6 +215,11 @@ export async function claimDailyReward(id: string): Promise<{ user: User; alread
   return { user: fromRow(data as UserRow), alreadyClaimed: false }
 }
 
+export async function incrementMatchStat(id: string, stat: 'wins' | 'losses' | 'draws'): Promise<void> {
+  const user = await getById(id)
+  await update(id, { [stat]: user[stat] + 1 })
+}
+
 export async function updateElo(id: string, delta: number): Promise<User> {
   const user = await getById(id)
   return update(id, { elo: Math.max(0, user.elo + delta) })

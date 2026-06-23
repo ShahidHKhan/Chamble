@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Navbar } from '../components/Navbar'
 import { getMatches } from '../services/matches'
 import { api } from '../services/api'
+import { useToast } from '../context/ToastContext'
 import type { DataEnvelope, MatchRecord, User } from '@chess/shared'
 
 const RESULT_LABEL: Record<string, string> = {
@@ -33,10 +34,10 @@ function timeUntilMidnightUTC(): string {
 export function ProfilePage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [matches,       setMatches]       = useState<MatchRecord[]>([])
-  const [localUser,     setLocalUser]     = useState<User | null>(null)
-  const [claiming,      setClaiming]      = useState(false)
-  const [claimMessage,  setClaimMessage]  = useState('')
+  const toast    = useToast()
+  const [matches,   setMatches]   = useState<MatchRecord[]>([])
+  const [localUser, setLocalUser] = useState<User | null>(null)
+  const [claiming,  setClaiming]  = useState(false)
 
   useEffect(() => { setLocalUser(user) }, [user])
 
@@ -52,17 +53,16 @@ export function ProfilePage() {
   async function handleClaim() {
     if (!localUser) return
     setClaiming(true)
-    setClaimMessage('')
     try {
       const res = await api<DataEnvelope<User>>(`users/${localUser.id}/daily-reward`, {})
       if (res.isSuccess) {
         setLocalUser(res.data)
-        setClaimMessage('+200 ELO claimed!')
+        toast('+200 ELO claimed!', 'success')
       } else {
-        setClaimMessage(res.message ?? 'Already claimed today')
+        toast(res.message ?? 'Already claimed today', 'error')
       }
     } catch {
-      setClaimMessage('Failed to claim reward')
+      toast('Failed to claim reward', 'error')
     } finally {
       setClaiming(false)
     }
@@ -97,10 +97,6 @@ export function ProfilePage() {
               <span className="stat__label">Losses</span>
             </div>
             <div className="stat">
-              <span className="stat__value">{localUser.draws}</span>
-              <span className="stat__label">Draws</span>
-            </div>
-            <div className="stat">
               <span className="stat__value">{winPct}%</span>
               <span className="stat__label">Win rate</span>
             </div>
@@ -116,7 +112,6 @@ export function ProfilePage() {
           ) : (
             <p className="daily-reward__cooldown">Next reward in {timeUntilMidnightUTC()}</p>
           )}
-          {claimMessage && <p className="daily-reward__message">{claimMessage}</p>}
         </section>
 
         <div className="profile-columns">
@@ -132,7 +127,7 @@ export function ProfilePage() {
                   <span className={`match-result match-result--${m.result}`}>
                     {RESULT_LABEL[m.result]}
                   </span>
-                  <span className="match-opponent">vs {m.opponentName}</span>
+                  <Link className="match-opponent" to={`/player/${m.opponentName}`}>vs {m.opponentName}</Link>
                   <span className="match-meta">{m.color} · {m.moves} moves</span>
                   <span className="match-date">{m.playedAt.slice(0, 10)}</span>
                 </div>

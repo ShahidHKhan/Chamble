@@ -9,6 +9,7 @@
 
 import { Router } from 'express'
 import * as Matches from '../models/matches'
+import * as Users from '../models/users'
 import { requireAuth, requireAdmin } from '../middleware/auth'
 import type { DataEnvelope, DataListEnvelope, MatchRecord } from '@chess/shared'
 
@@ -95,6 +96,10 @@ router.post('/', requireAuth, async (req, res) => {
       moves: moves ?? 0,
       gameVariant: gameVariant ?? 'chess21',
     })
+
+    const stat = result === 'win' ? 'wins' : result === 'loss' ? 'losses' : 'draws'
+    await Users.incrementMatchStat(userId, stat)
+
     res.status(201).json({ data: match, isSuccess: true })
   } catch (err) {
     console.error('[matches/create]', err)

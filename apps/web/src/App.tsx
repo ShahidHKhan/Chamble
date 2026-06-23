@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ToastProvider } from './context/ToastContext'
 import { LandingPage }      from './pages/LandingPage'
 import { RegisterPage }     from './pages/RegisterPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { HomePage }         from './pages/HomePage'
 import { ProfilePage }      from './pages/ProfilePage'
+import { PublicProfilePage } from './pages/PublicProfilePage'
 import { GamesPage }        from './pages/GamesPage'
 import { Chess21LobbyPage }       from './pages/Chess21LobbyPage'
 import { ChessMaticsLobbyPage }   from './pages/ChessMaticsLobbyPage'
@@ -32,6 +34,7 @@ function AppRoutes() {
       <Route path="/forgot-password"   element={<ForgotPasswordPage />} />
       <Route path="/home"              element={<Protected><HomePage /></Protected>} />
       <Route path="/profile"           element={<Protected><ProfilePage /></Protected>} />
+      <Route path="/player/:username"  element={<Protected><PublicProfilePage /></Protected>} />
       <Route path="/games"             element={<Protected><GamesPage /></Protected>} />
       <Route path="/games/chess21"          element={<Protected><Chess21LobbyPage /></Protected>} />
       <Route path="/games/chessmatics"      element={<Protected><ChessMaticsLobbyPage /></Protected>} />
@@ -45,9 +48,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   )
 }
