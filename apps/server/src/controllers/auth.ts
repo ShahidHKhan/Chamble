@@ -66,7 +66,8 @@ router.post('/register', async (req, res) => {
     }
     res.status(201).json(envelope)
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to create user'
+    const message = err instanceof Error ? err.message : (err as any)?.message ?? 'Failed to create user'
+    console.error('[register]', err)
     res.status(500).json({ data: null, isSuccess: false, message })
   }
 })
