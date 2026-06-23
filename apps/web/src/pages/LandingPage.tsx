@@ -2,12 +2,6 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-const QUICK_ACCOUNTS = [
-  { username: 'demo',   password: 'demo123'   },
-  { username: 'magnus', password: 'magnus123' },
-  { username: 'hikaru', password: 'hikaru123' },
-]
-
 export function LandingPage() {
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword]     = useState('')
@@ -20,11 +14,6 @@ export function LandingPage() {
     const result = await login(identifier.trim(), password)
     if (result.success) navigate('/home')
     else setError(result.error ?? 'Login failed')
-  }
-
-  const quickLogin = async (username: string, password: string) => {
-    const result = await login(username, password)
-    if (result.success) navigate('/home')
   }
 
   return (
@@ -83,16 +72,7 @@ export function LandingPage() {
           <Link to="/register" className="form-link form-link--prominent">Create account</Link>
         </div>
 
-        <div className="quick-login">
-          <span className="quick-login__label">Quick access</span>
-          <div className="quick-login__btns">
-            {QUICK_ACCOUNTS.map(({ username, password }) => (
-              <button key={username} className="quick-btn" onClick={() => quickLogin(username, password)}>
-                {username.charAt(0).toUpperCase() + username.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
+
       </div>
     </div>
   )
