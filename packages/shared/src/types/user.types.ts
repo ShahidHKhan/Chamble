@@ -8,6 +8,7 @@ export interface User {
   id: string
   username: string
   displayName: string
+  email: string
   elo: number
   wins: number
   losses: number
@@ -23,6 +24,7 @@ export interface UserRow {
   id: string
   username: string
   display_name: string
+  email: string
   elo: number
   wins: number
   losses: number

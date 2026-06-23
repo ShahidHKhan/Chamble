@@ -1,10 +1,11 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from 'react'
 import { api } from '../services/api'
 import type { DataEnvelope, User } from '@chess/shared'
 
 interface AuthContextType {
   user: User | null
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
+  register: (username: string, displayName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   updateElo: (delta: number) => void
 }
@@ -37,6 +38,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const register = useCallback(async (username: string, displayName: string, email: string, password: string) => {
+    try {
+      const res = await api<DataEnvelope<{ user: User; token: string }>>(
+        'auth/register',
+        { username, displayName, email, password },
+      )
+      if (!res.isSuccess) return { success: false, error: res.message }
+      setUser(res.data.user)
+      localStorage.setItem('chamble_user', JSON.stringify(res.data.user))
+      localStorage.setItem('chamble_token', res.data.token)
+      return { success: true }
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : 'Registration failed' }
+    }
+  }, [])
+
+  const userRef = useRef(user)
+  useEffect(() => { userRef.current = user }, [user])
+
   const logout = useCallback(() => {
     setUser(null)
     localStorage.removeItem('chamble_user')
@@ -50,9 +70,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('chamble_user', JSON.stringify(updated))
       return updated
     })
+    const userId = userRef.current?.id
+    if (userId) {
+      api<DataEnvelope<User>>(`users/${userId}/elo`, { delta }, { method: 'PATCH' })
+        .then(res => {
+          if (res.isSuccess) {
+            setUser(res.data)
+            localStorage.setItem('chamble_user', JSON.stringify(res.data))
+          }
+        })
+        .catch(() => {})
+    }
   }, [])
 
-  return <AuthContext.Provider value={{ user, login, logout, updateElo }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ user, login, register, logout, updateElo }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {
@@ -61,5 +96,4 @@ export function useAuth() {
   return ctx
 }
 
-// Re-export User from shared so consumers don't need a separate import
 export type { User }

@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { LandingPage }      from './pages/LandingPage'
+import { RegisterPage }     from './pages/RegisterPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { HomePage }         from './pages/HomePage'
 import { ProfilePage }      from './pages/ProfilePage'
 import { GamesPage }        from './pages/GamesPage'
@@ -23,15 +25,17 @@ function Root() {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/"              element={<Root />} />
-      <Route path="/home"          element={<Protected><HomePage /></Protected>} />
-      <Route path="/profile"       element={<Protected><ProfilePage /></Protected>} />
-      <Route path="/games"         element={<Protected><GamesPage /></Protected>} />
-      <Route path="/games/chess21"      element={<Protected><Chess21LobbyPage /></Protected>} />
-      <Route path="/games/chessmatics"   element={<Protected><ChessMaticsLobbyPage /></Protected>} />
-      <Route path="/games/chessroulette" element={<Protected><ChessRouletteLobbyPage /></Protected>} />
-      <Route path="/play"          element={<Protected><GamePage /></Protected>} />
-      <Route path="*"              element={<Navigate to="/" replace />} />
+      <Route path="/"                  element={<Root />} />
+      <Route path="/register"          element={<RegisterPage />} />
+      <Route path="/forgot-password"   element={<ForgotPasswordPage />} />
+      <Route path="/home"              element={<Protected><HomePage /></Protected>} />
+      <Route path="/profile"           element={<Protected><ProfilePage /></Protected>} />
+      <Route path="/games"             element={<Protected><GamesPage /></Protected>} />
+      <Route path="/games/chess21"          element={<Protected><Chess21LobbyPage /></Protected>} />
+      <Route path="/games/chessmatics"      element={<Protected><ChessMaticsLobbyPage /></Protected>} />
+      <Route path="/games/chessroulette"    element={<Protected><ChessRouletteLobbyPage /></Protected>} />
+      <Route path="/play"              element={<Protected><GamePage /></Protected>} />
+      <Route path="*"                  element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

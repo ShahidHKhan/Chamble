@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const QUICK_ACCOUNTS = [
@@ -9,15 +9,15 @@ const QUICK_ACCOUNTS = [
 ]
 
 export function LandingPage() {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError]       = useState('')
+  const [identifier, setIdentifier] = useState('')
+  const [password, setPassword]     = useState('')
+  const [error, setError]           = useState('')
   const { login }  = useAuth()
   const navigate   = useNavigate()
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    const result = await login(username.trim(), password)
+    const result = await login(identifier.trim(), password)
     if (result.success) navigate('/home')
     else setError(result.error ?? 'Login failed')
   }
@@ -29,7 +29,6 @@ export function LandingPage() {
 
   return (
     <div className="landing">
-      {/* Dimmed background layer */}
       <div className="landing__bg" aria-hidden="true">
         <span className="landing__bg-logo">Chamble</span>
         <div className="landing__bg-pieces" aria-hidden="true">
@@ -40,7 +39,6 @@ export function LandingPage() {
       </div>
       <div className="landing__overlay" />
 
-      {/* Login modal */}
       <div className="landing__modal" role="dialog" aria-label="Sign in">
         <div className="login-modal__header">
           <div className="login-modal__logo">Chamble</div>
@@ -49,20 +47,23 @@ export function LandingPage() {
 
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="form-field">
-            <label className="form-label" htmlFor="username">Username</label>
+            <label className="form-label" htmlFor="identifier">Username or email</label>
             <input
-              id="username"
+              id="identifier"
               className="form-input"
               type="text"
-              value={username}
-              onChange={e => { setUsername(e.target.value); setError('') }}
-              placeholder="Enter username"
+              value={identifier}
+              onChange={e => { setIdentifier(e.target.value); setError('') }}
+              placeholder="Enter username or email"
               autoComplete="username"
               autoFocus
             />
           </div>
           <div className="form-field">
-            <label className="form-label" htmlFor="password">Password</label>
+            <div className="form-label-row">
+              <label className="form-label" htmlFor="password">Password</label>
+              <Link to="/forgot-password" className="form-link">Forgot password?</Link>
+            </div>
             <input
               id="password"
               className="form-input"
@@ -76,6 +77,11 @@ export function LandingPage() {
           {error && <div className="form-error" role="alert">{error}</div>}
           <button className="btn-login" type="submit">Sign In</button>
         </form>
+
+        <div className="form-divider">
+          <span>Don't have an account?</span>
+          <Link to="/register" className="form-link form-link--prominent">Create account</Link>
+        </div>
 
         <div className="quick-login">
           <span className="quick-login__label">Quick access</span>

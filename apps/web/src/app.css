@@ -248,6 +248,80 @@
 
 .btn-login:hover { opacity: 0.88; }
 
+/* ── Form utilities ────────────────────────────────────────────────────────── */
+.form-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form-link {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.form-link:hover { opacity: 0.75; }
+
+.form-link--prominent {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  padding-top: 4px;
+}
+
+.form-hint {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.form-hint strong { color: var(--text-h); }
+
+.form-success {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+}
+
+.form-success p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.form-input--code {
+  font-family: var(--mono) !important;
+  font-size: 22px !important;
+  letter-spacing: 8px;
+  text-align: center;
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  text-align: center;
+  transition: color 0.15s;
+  font-family: var(--sans);
+}
+
+.btn-text:hover { color: var(--accent); }
+
 /* ── Quick login ───────────────────────────────────────────────────────────── */
 .quick-login {
   display: flex;

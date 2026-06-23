@@ -94,10 +94,43 @@ export type Database = {
           },
         ]
       }
+      password_reset_tokens: {
+        Row: {
+          id: string
+          user_id: string
+          token_hash: string
+          expires_at: string
+          used_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          token_hash: string
+          expires_at: string
+          used_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          token_hash?: string
+          expires_at?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "password_reset_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           created_at: string
           display_name: string
+          email: string
           draws: number
           elo: number
           id: string
@@ -110,6 +143,7 @@ export type Database = {
         Insert: {
           created_at?: string
           display_name: string
+          email: string
           draws?: number
           elo?: number
           id?: string
@@ -122,6 +156,7 @@ export type Database = {
         Update: {
           created_at?: string
           display_name?: string
+          email?: string
           draws?: number
           elo?: number
           id?: string

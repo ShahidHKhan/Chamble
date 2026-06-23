@@ -7,9 +7,9 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from './lib/database.types'
 
 const ACCOUNTS = [
-  { username: 'demo',   displayName: 'Demo User',  password: 'demo123',   elo: 1200, wins: 14,  losses: 18, draws: 3  },
-  { username: 'magnus', displayName: 'Magnus C.',  password: 'magnus123', elo: 2847, wins: 312, losses: 44, draws: 89 },
-  { username: 'hikaru', displayName: 'Hikaru N.',  password: 'hikaru123', elo: 2789, wins: 289, losses: 61, draws: 72 },
+  { username: 'demo',   displayName: 'Demo User',  email: 'demo@chamble.dev',   password: 'demo123',   elo: 1200, wins: 14,  losses: 18, draws: 3  },
+  { username: 'magnus', displayName: 'Magnus C.',  email: 'magnus@chamble.dev', password: 'magnus123', elo: 2847, wins: 312, losses: 44, draws: 89 },
+  { username: 'hikaru', displayName: 'Hikaru N.',  email: 'hikaru@chamble.dev', password: 'hikaru123', elo: 2789, wins: 289, losses: 61, draws: 72 },
 ]
 
 async function seed() {
@@ -36,6 +36,7 @@ async function seed() {
       // Update password hash (and stats) for existing row
       await db.from('users').update({
         password_hash: passwordHash,
+        email:         account.email,
         elo:           account.elo,
         wins:          account.wins,
         losses:        account.losses,
@@ -48,6 +49,7 @@ async function seed() {
       const { error } = await db.from('users').insert({
         username:      account.username,
         display_name:  account.displayName,
+        email:         account.email,
         password_hash: passwordHash,
         elo:           account.elo,
         wins:          account.wins,
