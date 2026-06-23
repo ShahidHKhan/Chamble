@@ -291,7 +291,10 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
   const isCapture = useCallback((from: Square, to: Square): boolean => {
     const source = chessRef.current.get(from)
     const target = chessRef.current.get(to)
-    return !!(source && target && source.color !== target.color)
+    if (source && target && source.color !== target.color) return true
+    // En passant: target square is empty but it's still a capture
+    const moves = chessRef.current.moves({ square: from, verbose: true }) as Move[]
+    return moves.some(m => m.to === to && m.flags.includes('e'))
   }, [])
 
   const legalMovesFrom = useCallback((square: Square): Square[] => {

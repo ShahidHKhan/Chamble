@@ -5,6 +5,7 @@ import cors from 'cors'
 import 'dotenv/config'
 import { EVENTS } from '@chess/shared'
 import { extractUser } from './middleware/auth'
+import * as Users from './models/users'
 import authController from './controllers/auth'
 import usersController from './controllers/users'
 import matchesController from './controllers/matches'
@@ -90,7 +91,7 @@ io.on('connection', (socket) => {
   })
 
   // Private room: join (also handles rejoin for active games)
-  socket.on(EVENTS.JOIN_ROOM, ({ username, roomCode, elo = 0, gameVariant = 'chess21' }: { username: string; roomCode: string; elo?: number; gameVariant?: string }) => {
+  socket.on(EVENTS.JOIN_ROOM, async ({ username, roomCode, gameVariant = 'chess21' }: { username: string; roomCode: string; gameVariant?: string }) => {
     const code = roomCode.toUpperCase()
 
     // ── Rejoin path ──────────────────────────────────────────────────────────
@@ -140,6 +141,8 @@ io.on('connection', (socket) => {
       socket.emit(EVENTS.ROOM_JOINED, { error: 'Wrong game mode' })
       return
     }
+    const player = await Users.getByUsername(username).catch(() => null)
+    const elo = player?.elo ?? 0
     if (elo < room.wager) {
       socket.emit(EVENTS.ROOM_JOINED, { error: `This room requires ${room.wager} ELO to join (you have ${elo})` })
       return
