@@ -21,7 +21,7 @@ export function HomePage() {
           <button className="home-card" onClick={() => navigate('/profile')}>
             <span className="home-card__icon">◉</span>
             <span className="home-card__title">Profile</span>
-            <span className="home-card__desc">Your stats, friends, and history</span>
+            <span className="home-card__desc">Your stats and match history</span>
           </button>
         </div>
       </main>

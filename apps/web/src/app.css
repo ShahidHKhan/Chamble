@@ -604,44 +604,6 @@
 .match-meta     { color: var(--text); font-size: 12px; }
 .match-date     { color: var(--text); font-size: 12px; font-family: var(--mono); }
 
-/* Friends list */
-.friends-list {
-  display: flex;
-  flex-direction: column;
-  max-height: 320px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-.friends-list::-webkit-scrollbar { width: 4px; }
-.friends-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-.friend-row {
-  display: grid;
-  grid-template-columns: 10px 1fr auto auto;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 16px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-}
-
-.friend-row:last-child { border-bottom: none; }
-
-.friend-status {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.friend-status--online   { background: #22c55e; }
-.friend-status--offline  { background: var(--border); }
-.friend-status--in-game  { background: #f59e0b; }
-
-.friend-name         { color: var(--text-h); font-weight: 500; }
-.friend-elo          { font-family: var(--mono); font-size: 12px; color: var(--accent); }
-.friend-status-label { font-size: 12px; color: var(--text); }
-
 /* ── Games page ────────────────────────────────────────────────────────────── */
 .games-main {
   flex: 1;

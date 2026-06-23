@@ -5,12 +5,6 @@ import { Navbar } from '../components/Navbar'
 import { getMatches } from '../services/matches'
 import type { MatchRecord } from '@chess/shared'
 
-const STATUS_LABEL: Record<string, string> = {
-  online:    'Online',
-  offline:   'Offline',
-  'in-game': 'In Game',
-}
-
 const RESULT_LABEL: Record<string, string> = {
   win: 'Win', loss: 'Loss', draw: 'Draw',
 }
@@ -84,14 +78,6 @@ export function ProfilePage() {
                   <span className="match-date">{m.playedAt.slice(0, 10)}</span>
                 </div>
               ))}
-            </div>
-          </section>
-
-          {/* Friends list */}
-          <section className="profile-section">
-            <h3 className="section-title">Friends</h3>
-            <div className="friends-list">
-              <p className="empty-state">Friends coming soon.</p>
             </div>
           </section>
 

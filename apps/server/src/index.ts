@@ -9,7 +9,6 @@ import * as Users from './models/users'
 import authController from './controllers/auth'
 import usersController from './controllers/users'
 import matchesController from './controllers/matches'
-import friendsController from './controllers/friends'
 
 const app  = express()
 const http = createServer(app)
@@ -24,7 +23,6 @@ app.use(extractUser)
 app.use('/api/v1/auth', authController)
 app.use('/api/v1/users', usersController)
 app.use('/api/v1/matches', matchesController)
-app.use('/api/v1/friends', friendsController)
 
 app.get('/health', (_, res) => res.json({ ok: true }))
 
