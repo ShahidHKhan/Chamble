@@ -15,8 +15,9 @@ export interface User {
   draws: number
   role: 'admin' | 'user'
   createdAt?: string
+  lastDailyClaimAt?: string | null
 }
- 
+
 // What the DB row looks like (snake_case). Only used inside models.
 // Exported so the model's fromRow/toRow helpers can reference it,
 // but controllers and services never touch this.
@@ -31,5 +32,6 @@ export interface UserRow {
   draws: number
   role: string
   created_at: string
+  last_daily_claim: string | null
 }
  

@@ -8,16 +8,17 @@ const TABLE = 'users'
 
 function fromRow(row: UserRow): User {
   return {
-    id:          row.id,
-    username:    row.username,
-    displayName: row.display_name,
-    email:       row.email,
-    elo:         row.elo,
-    wins:        row.wins,
-    losses:      row.losses,
-    draws:       row.draws,
-    role:        row.role as User['role'],
-    createdAt:   row.created_at,
+    id:                row.id,
+    username:          row.username,
+    displayName:       row.display_name,
+    email:             row.email,
+    elo:               row.elo,
+    wins:              row.wins,
+    losses:            row.losses,
+    draws:             row.draws,
+    role:              row.role as User['role'],
+    createdAt:         row.created_at,
+    lastDailyClaimAt:  row.last_daily_claim,
   }
 }
 
@@ -188,6 +189,31 @@ export async function update(
 }
 
 // ── Game-result helpers ──────────────────────────────────────────────────────
+
+export async function claimDailyReward(id: string): Promise<{ user: User; alreadyClaimed: boolean }> {
+  const user = await getById(id)
+
+  const now = new Date()
+  if (user.lastDailyClaimAt) {
+    const lastClaim = new Date(user.lastDailyClaimAt)
+    const sameDay =
+      lastClaim.getUTCFullYear() === now.getUTCFullYear() &&
+      lastClaim.getUTCMonth()    === now.getUTCMonth()    &&
+      lastClaim.getUTCDate()     === now.getUTCDate()
+    if (sameDay) return { user, alreadyClaimed: true }
+  }
+
+  const db = getSupabase()
+  const { data, error } = await db
+    .from(TABLE)
+    .update({ elo: user.elo + 200, last_daily_claim: now.toISOString() })
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return { user: fromRow(data as UserRow), alreadyClaimed: false }
+}
 
 export async function updateElo(id: string, delta: number): Promise<User> {
   const user = await getById(id)

@@ -38,4 +38,17 @@ router.patch('/:id/elo', requireAuth, async (req, res) => {
   }
 })
 
+router.post('/:id/daily-reward', requireAuth, async (req, res) => {
+  try {
+    const { user, alreadyClaimed } = await Users.claimDailyReward(req.params.id as string)
+    if (alreadyClaimed) {
+      res.status(400).json({ data: user, isSuccess: false, message: 'Already claimed today' })
+      return
+    }
+    res.json({ data: user, isSuccess: true, message: '+200 ELO claimed!' })
+  } catch {
+    res.status(500).json({ data: null, isSuccess: false, message: 'Failed to claim reward' })
+  }
+})
+
 export default router

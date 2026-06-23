@@ -139,6 +139,7 @@ export type Database = {
           role: string
           username: string
           wins: number
+          last_daily_claim: string | null
         }
         Insert: {
           created_at?: string
@@ -152,6 +153,7 @@ export type Database = {
           role?: string
           username: string
           wins?: number
+          last_daily_claim?: string | null
         }
         Update: {
           created_at?: string
@@ -165,6 +167,7 @@ export type Database = {
           role?: string
           username?: string
           wins?: number
+          last_daily_claim?: string | null
         }
         Relationships: []
       }

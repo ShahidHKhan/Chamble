@@ -606,7 +606,7 @@
 .match-list {
   display: flex;
   flex-direction: column;
-  max-height: 320px;
+  max-height: 520px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
@@ -1025,6 +1025,40 @@
 }
 
 /* ── Shared back button ─────────────────────────────────────────────────────── */
+.daily-reward {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.daily-reward__btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  font-family: var(--sans);
+}
+
+.daily-reward__btn:hover:not(:disabled) { opacity: 0.88; }
+.daily-reward__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.daily-reward__cooldown {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.daily-reward__message {
+  font-size: 13px;
+  color: #22c55e;
+  font-weight: 600;
+}
+
 .back-btn {
   background: none;
   border: none;
