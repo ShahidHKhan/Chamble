@@ -13,12 +13,14 @@ import { ChessRouletteLobbyPage } from './pages/ChessRouletteLobbyPage'
 import { GamePage }         from './pages/GamePage'
 
 function Protected({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
+  const { user, ready } = useAuth()
+  if (!ready) return null
   return user ? <>{children}</> : <Navigate to="/" replace />
 }
 
 function Root() {
-  const { user } = useAuth()
+  const { user, ready } = useAuth()
+  if (!ready) return null
   return user ? <Navigate to="/home" replace /> : <LandingPage />
 }
 

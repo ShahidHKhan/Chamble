@@ -224,6 +224,33 @@
   border-color: var(--accent-border);
 }
 
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper .form-input {
+  padding-right: 40px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted, #64748b);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.password-toggle:hover {
+  color: var(--text-h);
+}
+
 .form-error {
   font-size: 13px;
   color: #ef4444;

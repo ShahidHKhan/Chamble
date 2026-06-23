@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import rateLimit from 'express-rate-limit'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import * as Users from '../models/users'
@@ -6,6 +7,30 @@ import * as ResetTokens from '../models/resetTokens'
 import { sendPasswordResetEmail } from '../lib/email'
 import { requireAuth } from '../middleware/auth'
 import type { DataEnvelope, User } from '@chess/shared'
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  message: { data: null, isSuccess: false, message: 'Too many login attempts. Try again in 15 minutes.' },
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+})
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  message: { data: null, isSuccess: false, message: 'Too many accounts created from this IP. Try again in an hour.' },
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+})
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 3,
+  message: { data: null, isSuccess: false, message: 'Too many reset requests. Try again in an hour.' },
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+})
 
 const router = Router()
 
@@ -16,7 +41,7 @@ function getJwtSecret(): string {
 }
 
 // POST /api/auth/register
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   const { username, displayName, email, password } = req.body as {
     username: string
     displayName: string
@@ -73,7 +98,7 @@ router.post('/register', async (req, res) => {
 })
 
 // POST /api/auth/login  (accepts username or email)
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body as { username: string; password: string }
 
   if (!username || !password) {
@@ -121,7 +146,7 @@ router.get('/me', requireAuth, async (req, res) => {
 
 // POST /api/auth/forgot-password
 // Always returns 200 to prevent email enumeration attacks.
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
   const { email } = req.body as { email: string }
 
   if (!email) {

@@ -4,6 +4,7 @@ import type { DataEnvelope, User } from '@chess/shared'
 
 interface AuthContextType {
   user: User | null
+  ready: boolean
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
   register: (username: string, displayName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
@@ -21,6 +22,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null
     }
   })
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const token = localStorage.getItem('chamble_token')
+    if (!token) {
+      setReady(true)
+      return
+    }
+    api<DataEnvelope<User>>('auth/me')
+      .then(res => {
+        if (res.isSuccess) {
+          setUser(res.data)
+          localStorage.setItem('chamble_user', JSON.stringify(res.data))
+        } else {
+          setUser(null)
+          localStorage.removeItem('chamble_user')
+          localStorage.removeItem('chamble_token')
+        }
+      })
+      .catch(() => {
+        setUser(null)
+        localStorage.removeItem('chamble_user')
+        localStorage.removeItem('chamble_token')
+      })
+      .finally(() => setReady(true))
+  }, [])
 
   const login = useCallback(async (username: string, password: string) => {
     try {
@@ -84,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateElo }}>
+    <AuthContext.Provider value={{ user, ready, login, register, logout, updateElo }}>
       {children}
     </AuthContext.Provider>
   )

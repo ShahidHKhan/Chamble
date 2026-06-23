@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { Eye, EyeOff } from '../components/icons'
 
 export function LandingPage() {
-  const [identifier, setIdentifier] = useState('')
-  const [password, setPassword]     = useState('')
-  const [error, setError]           = useState('')
+  const [identifier,   setIdentifier]   = useState('')
+  const [password,     setPassword]     = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error,        setError]        = useState('')
   const { login }  = useAuth()
   const navigate   = useNavigate()
 
@@ -53,15 +55,25 @@ export function LandingPage() {
               <label className="form-label" htmlFor="password">Password</label>
               <Link to="/forgot-password" className="form-link">Forgot password?</Link>
             </div>
-            <input
-              id="password"
-              className="form-input"
-              type="password"
-              value={password}
-              onChange={e => { setPassword(e.target.value); setError('') }}
-              placeholder="Enter password"
-              autoComplete="current-password"
-            />
+            <div className="password-wrapper">
+              <input
+                id="password"
+                className="form-input"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => { setPassword(e.target.value); setError('') }}
+                placeholder="Enter password"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(v => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff /> : <Eye />}
+              </button>
+            </div>
           </div>
           {error && <div className="form-error" role="alert">{error}</div>}
           <button className="btn-login" type="submit">Sign In</button>
