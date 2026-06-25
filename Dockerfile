@@ -10,7 +10,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm turbo build --filter @chess/server
 # Creates a self-contained /deployment dir with prod deps + workspace packages resolved
-RUN pnpm --filter @chess/server deploy --prod /deployment
+RUN pnpm --filter @chess/server deploy --prod --legacy /deployment
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 FROM node:22-alpine AS runner
