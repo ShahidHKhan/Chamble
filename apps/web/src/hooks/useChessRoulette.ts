@@ -69,7 +69,6 @@ function legalTargetsForType(
   type: PieceSymbol,
   actingColor: Color,
 ): Square[] {
-  const fromSquares = squaresOfType(chess, type, actingColor)
   const targets = new Set<Square>()
   const allMoves = chess.moves({ verbose: true })
   for (const m of allMoves) {

@@ -96,8 +96,6 @@ export function ChessMaticsLobbyPage() {
     emitWhenReady(EVENTS.CREATE_ROOM, { username: user?.displayName ?? 'Player', wager: amount, timerEnabled, timerMs: timerMinutes * 60_000, gameVariant: 'chessmatics' })
   }, [wagerInput, user, timerEnabled, timerMinutes, emitWhenReady])
 
-  const handleCreateRoom = handleConfirmWager
-
   const handleJoinRoom = useCallback(() => {
     const code = joinInput.trim().toUpperCase()
     if (!code) return

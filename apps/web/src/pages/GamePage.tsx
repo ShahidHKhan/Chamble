@@ -118,7 +118,7 @@ export function GamePage() {
   const [moveHighlights,  setMoveHighlights]  = useState<Record<string, React.CSSProperties>>({})
 
   const {
-    snapshot, makeMove, resign, forceResign, timeout, isPlayerTurn,
+    snapshot, makeMove, forceResign, timeout, isPlayerTurn,
     isPawnPromotion, isCapture, legalMovesFrom, captureReversed, cancelCapture,
     exportState, restoreState,
   } = useChessGame(mode, isPaused, playerColor, /* kingHuntMode */ gameVariant !== 'chessroulette')
@@ -331,6 +331,7 @@ export function GamePage() {
       color: playerColor,
       moves: snapshot.moves.length,
       gameVariant,
+      playedAt: new Date().toISOString(),
     }).catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot.status])
