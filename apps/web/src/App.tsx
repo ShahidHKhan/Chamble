@@ -5,6 +5,7 @@ import { ToastProvider } from './context/ToastContext'
 import { LandingPage }      from './pages/LandingPage'
 import { RegisterPage }     from './pages/RegisterPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { VerifyEmailPage }    from './pages/VerifyEmailPage'
 import { HomePage }         from './pages/HomePage'
 import { ProfilePage }      from './pages/ProfilePage'
 import { PublicProfilePage } from './pages/PublicProfilePage'
@@ -32,6 +33,7 @@ function AppRoutes() {
       <Route path="/"                  element={<Root />} />
       <Route path="/register"          element={<RegisterPage />} />
       <Route path="/forgot-password"   element={<ForgotPasswordPage />} />
+      <Route path="/verify-email"      element={<VerifyEmailPage />} />
       <Route path="/home"              element={<Protected><HomePage /></Protected>} />
       <Route path="/profile"           element={<Protected><ProfilePage /></Protected>} />
       <Route path="/player/:username"  element={<Protected><PublicProfilePage /></Protected>} />

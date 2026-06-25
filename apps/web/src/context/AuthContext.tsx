@@ -5,8 +5,8 @@ import type { DataEnvelope, User } from '@chess/shared'
 interface AuthContextType {
   user: User | null
   ready: boolean
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
-  register: (username: string, displayName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean; email?: string }>
+  register: (username: string, displayName: string, email: string, password: string) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean; email?: string }>
   logout: () => void
   updateElo: (delta: number) => void
 }
@@ -61,21 +61,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('chamble_token', res.data.token)
       return { success: true }
     } catch (err: unknown) {
-      return { success: false, error: err instanceof Error ? err.message : 'Login failed' }
+      const message = err instanceof Error ? err.message : 'Login failed'
+      if (message === 'EMAIL_NOT_VERIFIED') {
+        const email = ((err as any).data as { email?: string } | undefined)?.email ?? ''
+        return { success: false, requiresVerification: true, email }
+      }
+      return { success: false, error: message }
     }
   }, [])
 
   const register = useCallback(async (username: string, displayName: string, email: string, password: string) => {
     try {
-      const res = await api<DataEnvelope<{ user: User; token: string }>>(
+      const res = await api<DataEnvelope<{ email: string }>>(
         'auth/register',
         { username, displayName, email, password },
       )
       if (!res.isSuccess) return { success: false, error: res.message }
-      setUser(res.data.user)
-      localStorage.setItem('chamble_user', JSON.stringify(res.data.user))
-      localStorage.setItem('chamble_token', res.data.token)
-      return { success: true }
+      return { success: true, requiresVerification: true, email: res.data.email }
     } catch (err: unknown) {
       return { success: false, error: err instanceof Error ? err.message : 'Registration failed' }
     }

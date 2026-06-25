@@ -27,7 +27,9 @@ export async function api<T>(
 
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({ message: res.statusText }))
-    throw new Error(errBody.message ?? 'Request failed')
+    const err = new Error(errBody.message ?? 'Request failed') as Error & { data?: unknown }
+    err.data = errBody.data
+    throw err
   }
 
   return res.json()

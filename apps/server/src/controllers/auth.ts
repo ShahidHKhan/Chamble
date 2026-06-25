@@ -4,7 +4,8 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import * as Users from '../models/users'
 import * as ResetTokens from '../models/resetTokens'
-import { sendPasswordResetEmail } from '../lib/email'
+import * as VerifyTokens from '../models/emailVerificationTokens'
+import { sendPasswordResetEmail, sendVerificationEmail } from '../lib/email'
 import { requireAuth } from '../middleware/auth'
 import type { DataEnvelope, User } from '@chess/shared'
 
@@ -28,6 +29,14 @@ const forgotPasswordLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 3,
   message: { data: null, isSuccess: false, message: 'Too many reset requests. Try again in an hour.' },
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+})
+
+const resendVerifyLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  message: { data: null, isSuccess: false, message: 'Too many verification requests. Try again in an hour.' },
   standardHeaders: 'draft-8',
   legacyHeaders: false,
 })
@@ -102,15 +111,12 @@ router.post('/register', registerLimiter, async (req, res) => {
   try {
     const passwordHash = await bcrypt.hash(password, 12)
     const user = await Users.create(
-      { username, displayName, email, elo: 1200, wins: 0, losses: 0, draws: 0, role: 'user' },
+      { username, displayName, email, elo: 1200, wins: 0, losses: 0, draws: 0, role: 'user', emailVerified: false },
       passwordHash,
     )
-    const token = jwt.sign({ sub: user.id, role: user.role }, getJwtSecret(), { expiresIn: '7d' })
-    const envelope: DataEnvelope<{ user: User; token: string }> = {
-      data: { user, token },
-      isSuccess: true,
-    }
-    res.status(201).json(envelope)
+    const code = await VerifyTokens.createToken(user.id)
+    await sendVerificationEmail(user.email, code)
+    res.status(201).json({ data: { email: user.email }, isSuccess: true, message: 'Check your email for a verification code.' })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : (err as any)?.message ?? 'Failed to create user'
     console.error('[register]', err)
@@ -142,6 +148,11 @@ router.post('/login', loginLimiter, async (req, res) => {
   const valid = await bcrypt.compare(password, hash)
   if (!valid) {
     res.status(401).json({ data: null, isSuccess: false, message: 'Invalid credentials' })
+    return
+  }
+
+  if (!profile.emailVerified) {
+    res.status(403).json({ data: { email: profile.email }, isSuccess: false, message: 'EMAIL_NOT_VERIFIED' })
     return
   }
 
@@ -227,6 +238,54 @@ router.post('/reset-password', async (req, res) => {
   } catch {
     res.status(500).json({ data: null, isSuccess: false, message: 'Failed to reset password' })
   }
+})
+
+// POST /api/auth/verify-email
+router.post('/verify-email', async (req, res) => {
+  const { email, code } = req.body as { email: string; code: string }
+
+  if (!email || !code) {
+    res.status(400).json({ data: null, isSuccess: false, message: 'Email and code are required' })
+    return
+  }
+
+  const user = await Users.getByEmail(email).catch(() => null)
+  if (!user) {
+    res.status(400).json({ data: null, isSuccess: false, message: 'Invalid or expired code' })
+    return
+  }
+
+  const userId = await VerifyTokens.consumeToken(code)
+  if (!userId || userId !== user.id) {
+    res.status(400).json({ data: null, isSuccess: false, message: 'Invalid or expired code' })
+    return
+  }
+
+  await Users.setEmailVerified(user.id)
+  const token = jwt.sign({ sub: user.id, role: user.role }, getJwtSecret(), { expiresIn: '7d' })
+  res.json({ data: { user: { ...user, emailVerified: true }, token }, isSuccess: true })
+})
+
+// POST /api/auth/resend-verification
+router.post('/resend-verification', resendVerifyLimiter, async (req, res) => {
+  const { email } = req.body as { email: string }
+
+  if (!email) {
+    res.status(400).json({ data: null, isSuccess: false, message: 'Email is required' })
+    return
+  }
+
+  try {
+    const user = await Users.getByEmail(email).catch(() => null)
+    if (user && !user.emailVerified) {
+      const code = await VerifyTokens.createToken(user.id)
+      await sendVerificationEmail(user.email, code)
+    }
+  } catch (err) {
+    console.error('[resend-verification]', err)
+  }
+
+  res.json({ data: null, isSuccess: true, message: 'If that email is pending verification, a new code has been sent.' })
 })
 
 export default router

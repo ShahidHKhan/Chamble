@@ -19,6 +19,7 @@ function fromRow(row: UserRow): User {
     role:              row.role as User['role'],
     createdAt:         row.created_at,
     lastDailyClaimAt:  row.last_daily_claim,
+    emailVerified:     row.email_verified,
   }
 }
 
@@ -213,6 +214,12 @@ export async function claimDailyReward(id: string): Promise<{ user: User; alread
 
   if (error) throw error
   return { user: fromRow(data as UserRow), alreadyClaimed: false }
+}
+
+export async function setEmailVerified(id: string): Promise<void> {
+  const db = getSupabase()
+  const { error } = await db.from(TABLE).update({ email_verified: true }).eq('id', id)
+  if (error) throw error
 }
 
 export async function incrementMatchStat(id: string, stat: 'wins' | 'losses' | 'draws'): Promise<void> {

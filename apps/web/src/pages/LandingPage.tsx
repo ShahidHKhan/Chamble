@@ -15,6 +15,7 @@ export function LandingPage() {
     e.preventDefault()
     const result = await login(identifier.trim(), password)
     if (result.success) navigate('/home')
+    else if (result.requiresVerification) navigate('/verify-email', { state: { email: result.email ?? '' } })
     else setError(result.error ?? 'Login failed')
   }
 

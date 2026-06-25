@@ -126,6 +126,38 @@ export type Database = {
           },
         ]
       }
+      email_verification_tokens: {
+        Row: {
+          id: string
+          user_id: string
+          token_hash: string
+          expires_at: string
+          used_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          token_hash: string
+          expires_at: string
+          used_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          token_hash?: string
+          expires_at?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_verification_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       users: {
         Row: {
           created_at: string
@@ -140,6 +172,7 @@ export type Database = {
           username: string
           wins: number
           last_daily_claim: string | null
+          email_verified: boolean
         }
         Insert: {
           created_at?: string
@@ -154,6 +187,7 @@ export type Database = {
           username: string
           wins?: number
           last_daily_claim?: string | null
+          email_verified?: boolean
         }
         Update: {
           created_at?: string
@@ -168,6 +202,7 @@ export type Database = {
           username?: string
           wins?: number
           last_daily_claim?: string | null
+          email_verified?: boolean
         }
         Relationships: []
       }

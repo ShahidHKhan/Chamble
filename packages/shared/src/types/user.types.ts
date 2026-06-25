@@ -16,6 +16,7 @@ export interface User {
   role: 'admin' | 'user'
   createdAt?: string
   lastDailyClaimAt?: string | null
+  emailVerified: boolean
 }
 
 // What the DB row looks like (snake_case). Only used inside models.
@@ -33,5 +34,6 @@ export interface UserRow {
   role: string
   created_at: string
   last_daily_claim: string | null
+  email_verified: boolean
 }
  

@@ -46,7 +46,8 @@ export function RegisterPage() {
     const result = await register(username.trim(), displayName.trim(), email.trim(), password)
     setLoading(false)
 
-    if (result.success) navigate('/home')
+    if (result.success && result.requiresVerification) navigate('/verify-email', { state: { email: email.trim() } })
+    else if (result.success) navigate('/home')
     else setError(result.error ?? 'Registration failed')
   }
 
