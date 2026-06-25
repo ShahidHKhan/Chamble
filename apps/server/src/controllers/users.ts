@@ -43,6 +43,10 @@ router.get('/:id', async (req, res) => {
 })
 
 router.patch('/:id/elo', requireAuth, async (req, res) => {
+  if (req.userId !== req.params.id) {
+    res.status(403).json({ data: null, isSuccess: false, message: 'Forbidden' })
+    return
+  }
   try {
     const updated = await Users.updateElo(req.params.id as string, Number(req.body.delta))
     res.json({ data: updated, isSuccess: true })
@@ -52,6 +56,10 @@ router.patch('/:id/elo', requireAuth, async (req, res) => {
 })
 
 router.post('/:id/daily-reward', requireAuth, async (req, res) => {
+  if (req.userId !== req.params.id) {
+    res.status(403).json({ data: null, isSuccess: false, message: 'Forbidden' })
+    return
+  }
   try {
     const { user, alreadyClaimed } = await Users.claimDailyReward(req.params.id as string)
     if (alreadyClaimed) {

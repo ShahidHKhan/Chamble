@@ -2,6 +2,7 @@ import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
+import helmet from 'helmet'
 import 'dotenv/config'
 import { EVENTS } from '@chess/shared'
 import { extractUser } from './middleware/auth'
@@ -10,12 +11,15 @@ import authController from './controllers/auth'
 import usersController from './controllers/users'
 import matchesController from './controllers/matches'
 
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173'
+
 const app  = express()
 const http = createServer(app)
-const io   = new Server(http, { cors: { origin: '*' } })
+const io   = new Server(http, { cors: { origin: CORS_ORIGIN } })
 const PORT = process.env.PORT || 3001
 
-app.use(cors())
+app.use(helmet())
+app.use(cors({ origin: CORS_ORIGIN, credentials: true }))
 app.use(express.json())
 
 // Auth middleware + REST API routes
