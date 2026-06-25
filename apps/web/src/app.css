@@ -469,6 +469,137 @@
   line-height: 1.4;
 }
 
+/* ── What is Chamble sidebar ───────────────────────────────────────────────── */
+.wic-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 100;
+}
+.wic-backdrop--open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.wic-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 380px;
+  max-width: 90vw;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  padding: 32px 28px;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 101;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.wic-panel--open {
+  transform: translateX(0);
+}
+
+.wic-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.wic-close:hover { color: var(--text-h); background: var(--accent-bg); }
+
+.wic-heading {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-h);
+  font-family: var(--heading);
+  margin: 0 0 4px;
+}
+
+.wic-tagline {
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+  margin: 0 0 16px;
+  letter-spacing: 0.2px;
+}
+
+.wic-body {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.wic-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.wic-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text);
+  margin: 0;
+}
+
+.wic-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.wic-mode__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.wic-mode__desc {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.wic-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.wic-btn:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
 /* ── Profile page ──────────────────────────────────────────────────────────── */
 .profile-main {
   flex: 1;

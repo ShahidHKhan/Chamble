@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Navbar } from '../components/Navbar'
+import { WhatIsChamble } from '../components/WhatIsChamble'
 
 export function HomePage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const firstName = user?.displayName.split(' ')[0] ?? 'Player'
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="page">
@@ -24,7 +27,11 @@ export function HomePage() {
             <span className="home-card__desc">Your stats and match history</span>
           </button>
         </div>
+        <button className="wic-btn" onClick={() => setSidebarOpen(true)}>
+          ♟ What is Chamble?
+        </button>
       </main>
+      <WhatIsChamble open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
     </div>
   )
 }
