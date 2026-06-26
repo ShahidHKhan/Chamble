@@ -8,7 +8,7 @@ import { EVENTS } from '@chess/shared'
 import { recordMatch } from '../services/matches'
 import { useChessGame, type GameMode, type GameSnapshot, type SyncState } from '../hooks/useChessGame'
 import { useClock } from '../hooks/useClock'
-import { useBlackjack } from '../hooks/useBlackjack'
+import { useBlackjack, type Card, type BlackjackPhase, type BlackjackResult } from '../hooks/useBlackjack'
 import { useChessMatics, type MaticsResult } from '../hooks/useChessMatics'
 import { useChessRoulette, findKingCaptureMove, kingCaptureTargetFrom, kingSquareOf, spinWheel, computeBustInfo } from '../hooks/useChessRoulette'
 import type { RouletteBranch } from '../hooks/useChessRoulette'
@@ -103,6 +103,17 @@ export function GamePage() {
   const [pendingPromo,        setPendingPromo]        = useState<{ from: Square; to: Square } | null>(null)
   const [pendingCapture,      setPendingCapture]      = useState<{ from: Square; to: Square } | null>(null)
   const [captureLabels,       setCaptureLabels]       = useState({ attacker: '', defender: '' })
+  const [bjIsAttacker,        setBjIsAttacker]        = useState(false)
+
+  type RemoteBjState = {
+    phase: BlackjackPhase
+    playerHand: Card[]
+    dealerHand: Card[]
+    result: BlackjackResult | null
+    attackerLabel: string
+    defenderLabel: string
+  }
+  const [remoteBjState, setRemoteBjState] = useState<RemoteBjState | null>(null)
 
   // Chess-Matics state
   const [pendingMaticsCapture, setPendingMaticsCapture] = useState<{ from: Square; to: Square } | null>(null)
@@ -127,7 +138,9 @@ export function GamePage() {
   const matics  = useChessMatics()
   const roulette = useChessRoulette()
 
-  const bjActive      = bj.phase !== 'idle'
+  const isDefending    = !bjIsAttacker && remoteBjState !== null
+  const bjDisplayPhase = isDefending ? remoteBjState!.phase : bj.phase
+  const bjActive       = bjDisplayPhase !== 'idle'
   const maticsActive  = gameVariant === 'chessmatics' && matics.phase !== 'idle'
   const rouletteActive = gameVariant === 'chessroulette' && roulette.phase !== 'idle'
   const isGameOver    = snapshot.status !== 'playing'
@@ -169,6 +182,7 @@ export function GamePage() {
       if (data.kind === 'move')                  makeMove(data.from as Square, data.to as Square, (data.promotion ?? 'q') as PieceSymbol)
       else if (data.kind === 'capture_reversed') captureReversed(data.from as Square)
       else                                       cancelCapture()
+      setRemoteBjState(null)
     }
     socket.on(EVENTS.MOVE, onRemoteMove)
     return () => { socket.off(EVENTS.MOVE, onRemoteMove) }
@@ -278,6 +292,32 @@ export function GamePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameVariant, roulette.phase])
 
+  // Chess-21: attacker streams live BJ state to the defender
+  useEffect(() => {
+    if (mode !== 'multiplayer' || gameVariant !== 'chess21' || !bjIsAttacker) return
+    if (bj.phase === 'idle') return
+    emitToGame(EVENTS.BJ_STATE, {
+      phase: bj.phase,
+      playerHand: bj.playerHand,
+      dealerHand: bj.dealerHand,
+      result: bj.result,
+      attackerLabel: captureLabels.attacker,
+      defenderLabel: captureLabels.defender,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bj.phase, bj.playerHand, bj.dealerHand, bj.result])
+
+  // Chess-21: defender receives attacker's BJ state and displays it read-only
+  useEffect(() => {
+    if (mode !== 'multiplayer' || gameVariant !== 'chess21') return
+    const onBjState = (state: RemoteBjState) => {
+      if (bjIsAttacker) return
+      setRemoteBjState(state)
+    }
+    socket.on(EVENTS.BJ_STATE, onBjState)
+    return () => { socket.off(EVENTS.BJ_STATE, onBjState) }
+  }, [mode, gameVariant, bjIsAttacker])
+
   // Roulette: computer opponent — spin and play a random valid move of rolled type
   useEffect(() => {
     if (gameVariant !== 'chessroulette' || mode !== 'computer') return
@@ -350,6 +390,7 @@ export function GamePage() {
     const timer = setTimeout(() => {
       setPendingCapture(null)
       bj.reset()
+      setBjIsAttacker(false)
       if (result === 'win') {
         makeMove(from, to, 'q')
         emitMove({ kind: 'move', from, to, promotion: 'q' })
@@ -496,6 +537,7 @@ export function GamePage() {
       defender: `${colorName(snapshot.turn === 'w' ? 'b' : 'w')}'s piece`,
     })
     setPendingCapture({ from, to })
+    setBjIsAttacker(true)
     bj.deal()
   }, [snapshot.turn, bj])
 
@@ -731,14 +773,15 @@ export function GamePage() {
           {gameVariant === 'chess21' ? (
             <div className={`bj-panel${bjActive ? '' : ' bj-panel--idle'}`}>
               <BlackjackTable
-                phase={bj.phase}
-                playerHand={bj.playerHand}
-                dealerHand={bj.dealerHand}
-                result={bj.result}
-                attackerLabel={captureLabels.attacker}
-                defenderLabel={captureLabels.defender}
+                phase={isDefending ? remoteBjState!.phase : bj.phase}
+                playerHand={isDefending ? remoteBjState!.playerHand : bj.playerHand}
+                dealerHand={isDefending ? remoteBjState!.dealerHand : bj.dealerHand}
+                result={isDefending ? remoteBjState!.result : bj.result}
+                attackerLabel={isDefending ? remoteBjState!.attackerLabel : captureLabels.attacker}
+                defenderLabel={isDefending ? remoteBjState!.defenderLabel : captureLabels.defender}
                 onHit={bj.hit}
                 onStand={bj.stand}
+                readOnly={isDefending}
               />
             </div>
           ) : gameVariant === 'chessmatics' ? (
@@ -819,7 +862,7 @@ export function GamePage() {
             />
             {isSyncing && <div className="board-pause-overlay"><span>Syncing…</span></div>}
             {isPaused && !isSyncing && <div className="board-pause-overlay"><span>Paused</span></div>}
-            {bjActive && bj.phase !== 'resolved' && !isPaused && (
+            {bjActive && bjDisplayPhase !== 'resolved' && !isPaused && (
               <div className="board-pause-overlay board-pause-overlay--bj"><span>Blackjack</span></div>
             )}
             {maticsActive && matics.phase !== 'resolved' && !isPaused && (

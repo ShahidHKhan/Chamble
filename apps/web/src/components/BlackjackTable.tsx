@@ -9,6 +9,7 @@ interface Props {
   defenderLabel: string
   onHit: () => void
   onStand: () => void
+  readOnly?: boolean
 }
 
 function CardDisplay({ card }: { card: Card }) {
@@ -28,6 +29,12 @@ const RESULT_TEXT: Record<BlackjackResult, string> = {
   push: 'Push — no capture, turn passes.',
 }
 
+const SPECTATOR_RESULT_TEXT: Record<BlackjackResult, string> = {
+  win:  'Attacker wins — capture succeeds!',
+  lose: 'Dealer wins — capture blocked!',
+  push: 'Push — no capture, turn passes.',
+}
+
 const RESULT_CLASS: Record<BlackjackResult, string> = {
   win:  'bj-result--win',
   lose: 'bj-result--lose',
@@ -36,7 +43,7 @@ const RESULT_CLASS: Record<BlackjackResult, string> = {
 
 const IDLE_CARD = <div className="bj-card bj-card--facedown">?</div>
 
-export function BlackjackTable({ phase, playerHand, dealerHand, result, attackerLabel, defenderLabel, onHit, onStand }: Props) {
+export function BlackjackTable({ phase, playerHand, dealerHand, result, attackerLabel, defenderLabel, onHit, onStand, readOnly }: Props) {
   if (phase === 'idle') {
     return (
       <div className="bj-table">
@@ -63,11 +70,15 @@ export function BlackjackTable({ phase, playerHand, dealerHand, result, attacker
     ? `${handValue(shownDealer)}+`
     : `${handValue(dealerHand)}`
 
+  const playerLabel = readOnly ? attackerLabel : 'You'
+  const resultText  = readOnly ? SPECTATOR_RESULT_TEXT : RESULT_TEXT
+
   return (
     <div className="bj-table">
       <div className="bj-header">
         <span className="bj-header__title">Capture Battle</span>
         <span className="bj-header__sub">{attackerLabel} attacks {defenderLabel}</span>
+        {readOnly && <span className="bj-header__watching">Watching…</span>}
       </div>
 
       <div className="bj-section">
@@ -83,22 +94,28 @@ export function BlackjackTable({ phase, playerHand, dealerHand, result, attacker
       <div className="bj-divider" />
 
       <div className="bj-section">
-        <div className="bj-section__label">You &bull; {playerTotal}</div>
+        <div className="bj-section__label">{playerLabel} &bull; {playerTotal}</div>
         <div className="bj-hand">
           {playerHand.map((card, i) => <CardDisplay key={i} card={card} />)}
         </div>
       </div>
 
-      {phase === 'player-turn' && (
+      {phase === 'player-turn' && !readOnly && (
         <div className="bj-actions">
           <button className="btn btn--primary" onClick={onHit}>Hit</button>
           <button className="btn btn--secondary" onClick={onStand}>Stand</button>
         </div>
       )}
 
+      {phase === 'player-turn' && readOnly && (
+        <div className="bj-actions bj-actions--watching">
+          <span className="bj-watching-label">Opponent is deciding…</span>
+        </div>
+      )}
+
       {phase === 'resolved' && result && (
         <div className={`bj-result-text ${RESULT_CLASS[result]}`}>
-          {RESULT_TEXT[result]}
+          {resultText[result]}
         </div>
       )}
     </div>

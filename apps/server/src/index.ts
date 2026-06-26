@@ -199,6 +199,11 @@ io.on('connection', (socket) => {
     socket.to(gameId).emit(EVENTS.ROULETTE_BUST)
   })
 
+  // Chess-21: relay blackjack state from attacker to defender in real time
+  socket.on(EVENTS.BJ_STATE, ({ gameId, ...state }: { gameId: string; [key: string]: unknown }) => {
+    socket.to(gameId).emit(EVENTS.BJ_STATE, state)
+  })
+
   // ── In-game chat ────────────────────────────────────────────────────────────
 
   socket.on(EVENTS.CHAT_MESSAGE, ({ gameId, text }: { gameId: string; text: string }) => {
