@@ -760,8 +760,14 @@ export function GamePage() {
 
   const promoOptions = snapshot.turn === 'w' ? PROMOTION_PIECES : PROMOTION_PIECES_BLACK
 
+  const gamePageClass = [
+    'game-page',
+    isGameOver && snapshot.winner === playerColor                              ? 'game-page--win'  : '',
+    isGameOver && snapshot.winner !== null && snapshot.winner !== playerColor  ? 'game-page--lose' : '',
+  ].filter(Boolean).join(' ')
+
   return (
-    <div className="game-page">
+    <div className={gamePageClass}>
       <header className="game-header">
         <span className="game-header__logo">Chamble</span>
       </header>
