@@ -30,6 +30,8 @@ export const EVENTS = {
   // Chess-Roulette turn events
   ROULETTE_ROLLED:        'roulette:rolled',
   ROULETTE_BUST:          'roulette:bust',
+  // Chess-21 blackjack real-time state broadcast (attacker → defender)
+  BJ_STATE:               'bj:state',
   // In-game chat
   CHAT_MESSAGE:           'chat:message',
   CHAT_RECEIVE:           'chat:receive',
