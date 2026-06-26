@@ -876,6 +876,76 @@ a.match-opponent:hover { text-decoration: underline; }
   border-radius: 4px;
 }
 
+/* ── Games page sections ──────────────────────────────────────────────────── */
+.games-sections {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  max-width: 780px;
+}
+
+.games-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  padding: 0 20px;
+}
+
+.games-section:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.games-section__divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.games-section__divider::after {
+  content: '';
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+}
+
+.games-section__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.games-section__divider--low .games-section__label {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.games-section__divider--mid .games-section__label {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.games-section__divider--high .games-section__label {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.game-card--section {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* ── Chess21 lobby ─────────────────────────────────────────────────────────── */
 .lobby-main {
   flex: 1;

@@ -4,6 +4,15 @@
   flex-direction: column;
   flex: 1;
   background: var(--bg);
+  transition: box-shadow 0.8s ease;
+}
+
+.game-page--win {
+  box-shadow: inset 0 0 200px rgba(34, 197, 94, 0.22);
+}
+
+.game-page--lose {
+  box-shadow: inset 0 0 200px rgba(239, 68, 68, 0.22);
 }
 
 .game-header {
