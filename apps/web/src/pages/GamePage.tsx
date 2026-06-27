@@ -625,7 +625,8 @@ export function GamePage() {
         const capture = findKingCaptureMove(chess, roulette.rolledPiece, snapshot.turn)
         if (capture && capture.from === from) { handleRouletteKingCapture(from, to); return false }
       }
-      if (isCapture(from, to) || isPawnPromotion(from, to)) {
+      if (isPawnPromotion(from, to)) { setPendingPromo({ from, to }); return false }
+      if (isCapture(from, to)) {
         const moved = makeMove(from, to, 'q')
         if (moved) { emitMove({ kind: 'move', from, to, promotion: 'q' }); roulette.endTurn() }
         return moved
@@ -673,6 +674,7 @@ export function GamePage() {
           const capture = findKingCaptureMove(chess, roulette.rolledPiece, snapshot.turn)
           if (capture && capture.from === from) { handleRouletteKingCapture(from, to); return }
         }
+        if (isPawnPromotion(from, to)) { setPendingPromo({ from, to }); return }
         const moved = makeMove(from, to, 'q')
         if (moved) { emitMove({ kind: 'move', from, to, promotion: 'q' }); roulette.endTurn() }
         return
@@ -730,7 +732,8 @@ export function GamePage() {
     makeMove(from, to, piece)
     emitMove({ kind: 'move', from, to, promotion: piece })
     setPendingPromo(null)
-  }, [pendingPromo, makeMove, emitMove])
+    if (gameVariant === 'chessroulette') roulette.endTurn()
+  }, [pendingPromo, makeMove, emitMove, gameVariant, roulette])
 
   // ── Derived styles ─────────────────────────────────────────────────────────
 
