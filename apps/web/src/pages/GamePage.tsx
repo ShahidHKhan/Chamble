@@ -132,7 +132,7 @@ export function GamePage() {
     snapshot, makeMove, forceResign, timeout, isPlayerTurn,
     isPawnPromotion, isCapture, legalMovesFrom, captureReversed, cancelCapture,
     exportState, restoreState,
-  } = useChessGame(mode, isPaused, playerColor, /* kingHuntMode */ gameVariant !== 'chessroulette')
+  } = useChessGame(mode, isPaused, playerColor)
   const { times, active, setActive, isExpired, expiredColor } = useClock(timerMs)
   const bj      = useBlackjack()
   const matics  = useChessMatics()

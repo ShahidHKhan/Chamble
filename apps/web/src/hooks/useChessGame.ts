@@ -80,7 +80,7 @@ function buildSnapshot(
   }
 }
 
-function resolveStatus(chess: Chess, kingHuntMode: boolean): { status: GameStatus; winner: Color | null } {
+function resolveStatus(chess: Chess): { status: GameStatus; winner: Color | null } {
   if (chess.isStalemate()) return { status: 'stalemate', winner: null }
   if (chess.isDraw())      return { status: 'draw',      winner: null }
   if (chess.isCheckmate()) {
@@ -147,9 +147,7 @@ function findKingCapture(chess: Chess, color: Color): { from: Square; to: Square
   return null
 }
 
-export function useChessGame(mode: GameMode, paused = false, playerColor: Color = 'w', kingHuntMode = true) {
-  const kingHuntRef = useRef(kingHuntMode)
-  kingHuntRef.current = kingHuntMode
+export function useChessGame(mode: GameMode, paused = false, playerColor: Color = 'w') {
   const chessRef    = useRef(new Chess())
   const statusRef   = useRef<GameStatus>('playing')
   const logRef      = useRef<LogEntry[]>([])
@@ -188,7 +186,7 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
       const move = chess.move({ from, to, promotion })
       if (!move) return false
       logRef.current.push({ kind: 'chess', move })
-      const { status, winner } = resolveStatus(chess, kingHuntRef.current)
+      const { status, winner } = resolveStatus(chess)
       setSnapshot(buildSnapshot(chess, status, winner, { from, to }, logRef.current))
       return true
     } catch {
@@ -245,7 +243,7 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
       const picked = legal[Math.floor(Math.random() * legal.length)]
       const move = chess.move({ from: picked.from, to: picked.to, promotion: picked.promotion })
       logRef.current.push({ kind: 'chess', move })
-      const { status, winner } = resolveStatus(chess, kingHuntRef.current)
+      const { status, winner } = resolveStatus(chess)
       setSnapshot(buildSnapshot(chess, status, winner, { from: picked.from, to: picked.to }, logRef.current))
     }, 450)
     return () => clearTimeout(timer)
@@ -305,7 +303,7 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
     parts[4] = '0'
     if (wasTurn === 'b') parts[5] = String(parseInt(parts[5]) + 1)
     chess.load(parts.join(' '))
-    const { status, winner } = resolveStatus(chess, kingHuntRef.current)
+    const { status, winner } = resolveStatus(chess)
     setSnapshot(buildSnapshot(chess, status, winner, null, logRef.current))
   }, [])
 
@@ -319,7 +317,7 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
     parts[4] = String(parseInt(parts[4]) + 1)
     if (wasTurn === 'b') parts[5] = String(parseInt(parts[5]) + 1)
     chess.load(parts.join(' '))
-    const { status, winner } = resolveStatus(chess, kingHuntRef.current)
+    const { status, winner } = resolveStatus(chess)
     setSnapshot(buildSnapshot(chess, status, winner, null, logRef.current))
   }, [])
 
