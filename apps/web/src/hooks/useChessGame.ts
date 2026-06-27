@@ -80,12 +80,10 @@ function buildSnapshot(
   }
 }
 
-// In king-hunt mode (chess-21, chessmatics) checkmate doesn't end the game — the king must be
-// physically captured. In standard-ending mode (chess-roulette) checkmate ends normally.
 function resolveStatus(chess: Chess, kingHuntMode: boolean): { status: GameStatus; winner: Color | null } {
   if (chess.isStalemate()) return { status: 'stalemate', winner: null }
   if (chess.isDraw())      return { status: 'draw',      winner: null }
-  if (!kingHuntMode && chess.isCheckmate()) {
+  if (chess.isCheckmate()) {
     // The side whose turn it is has been checkmated; the other side wins.
     const winner: Color = chess.turn() === 'w' ? 'b' : 'w'
     return { status: 'checkmate', winner }
@@ -198,27 +196,6 @@ export function useChessGame(mode: GameMode, paused = false, playerColor: Color 
     }
   }, [])
 
-  // Auto-pass the turn when the current player has no legal moves (king-hunt mode only).
-  // In king-hunt variants (chess-21, chessmatics) checkmate doesn't end the game — the
-  // attacker must physically capture the king. In roulette (kingHuntMode=false) checkmate
-  // is detected by resolveStatus and ends the game normally, so this effect is skipped.
-  useEffect(() => {
-    if (!kingHuntRef.current) return
-    if (snapshot.status !== 'playing') return
-    const chess = chessRef.current
-    if (chess.moves().length > 0) return
-    // Stalemate should have been caught by resolveStatus already, but guard here too.
-    if (!chess.isCheck()) return
-    // Flip the turn via FEN surgery (same as cancelCapture).
-    const parts = chess.fen().split(' ')
-    const wasTurn = parts[1] as Color
-    parts[1] = wasTurn === 'w' ? 'b' : 'w'
-    parts[3] = '-'
-    parts[4] = String(parseInt(parts[4]) + 1)
-    if (wasTurn === 'b') parts[5] = String(parseInt(parts[5]) + 1)
-    chess.load(parts.join(' '))
-    setSnapshot(buildSnapshot(chess, 'playing', null, snapshotRef.current?.lastMove ?? null, logRef.current))
-  }, [snapshot.turn, snapshot.status])
 
   const resign = useCallback(() => {
     setSnapshot(prev => ({
