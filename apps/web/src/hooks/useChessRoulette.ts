@@ -29,15 +29,30 @@ const PIECE_NAMES: Record<PieceSymbol, string> = {
 
 export function pieceName(p: PieceSymbol): string { return PIECE_NAMES[p] }
 
-export function spinWheel(type: WheelType = 'weighted'): PieceSymbol {
-  const weights = WHEEL_WEIGHTS[type]
+// Narrows the base wheel table down to piece types the color still has on the
+// board, then renormalizes so the remaining segments sum back to 100%. A type
+// is only dropped once its count hits zero (not scaled down as it depletes),
+// so e.g. losing one of two knights doesn't touch the wheel — losing both does.
+// If nothing but the king is left, the wheel collapses to a certain king roll,
+// which `startTurn`'s existing `rolled === 'k'` check already routes to the
+// forced King branch.
+export function computeLiveWeights(type: WheelType, chess: Chess, color: Color): [PieceSymbol, number][] {
+  const base = WHEEL_WEIGHTS[type]
+  const alive = base.filter(([t]) => squaresOfType(chess, t, color).length > 0)
+  if (alive.length === 0) return [['k', 100]]
+  const total = alive.reduce((sum, [, w]) => sum + w, 0)
+  return alive.map(([t, w]) => [t, (w / total) * 100])
+}
+
+export function spinWheel(type: WheelType, chess: Chess, color: Color): PieceSymbol {
+  const weights = computeLiveWeights(type, chess, color)
   const rand = Math.random() * 100
   let acc = 0
   for (const [piece, weight] of weights) {
     acc += weight
     if (rand < acc) return piece
   }
-  return 'p'
+  return weights[weights.length - 1][0]
 }
 
 // Returns the squares of all pieces of `type` belonging to `color` on this board.
@@ -216,7 +231,7 @@ export function useChessRoulette() {
   // Begin a turn: spin the wheel, then resolve into choosing/forced-king/bust.
   const startTurn = useCallback((chess: Chess, actingColor: Color, wheelType: WheelType = 'weighted') => {
     clearSpin()
-    const rolled = spinWheel(wheelType)
+    const rolled = spinWheel(wheelType, chess, actingColor)
     setState(prev => ({ ...prev, phase: 'spinning', rolledPiece: rolled, chosenBranch: null, validFromSquares: [] }))
 
     spinTimerRef.current = setTimeout(() => {

@@ -1,6 +1,8 @@
-import type { PieceSymbol } from 'chess.js'
+import { useMemo } from 'react'
+import type { PieceSymbol, Color } from 'chess.js'
+import { Chess } from 'chess.js'
 import type { RoulettePhase, RouletteBranch, WheelType } from '../hooks/useChessRoulette'
-import { pieceName, WHEEL_WEIGHTS } from '../hooks/useChessRoulette'
+import { pieceName, computeLiveWeights } from '../hooks/useChessRoulette'
 
 const PIECE_SYMBOLS: Record<PieceSymbol, { white: string; black: string }> = {
   p: { white: '♙', black: '♟' },
@@ -119,6 +121,8 @@ interface Props {
   opponentRolled: PieceSymbol | null
   isPlayerTurn: boolean
   wheelType: WheelType
+  fen: string
+  color: Color
   kingHasMoves: boolean
   onSpin: () => void
   onChooseBranch: (branch: RouletteBranch) => void
@@ -131,13 +135,20 @@ export function RoulettePanel({
   opponentRolled,
   isPlayerTurn,
   wheelType,
+  fen,
+  color,
   kingHasMoves,
   onSpin,
   onChooseBranch,
 }: Props) {
   const isIdle = phase === 'idle'
   const isSpinReady = isIdle && isPlayerTurn
-  const activeSegments = WHEEL_WEIGHTS[wheelType]
+  // Recomputed from the live board each render, so the wheel/legend reflect
+  // this player's own remaining pieces as they're captured or promoted.
+  const activeSegments = useMemo(
+    () => computeLiveWeights(wheelType, new Chess(fen), color),
+    [wheelType, fen, color],
+  )
 
   return (
     <div className={`roulette-panel${isIdle && !isSpinReady ? ' roulette-panel--idle' : ''}${isSpinReady ? ' roulette-panel--spin-ready' : ''}`}>
@@ -245,7 +256,7 @@ export function RoulettePanel({
               <div key={piece} className="roulette-legend__row">
                 <span className="roulette-legend__swatch" style={{ background: SEGMENT_COLORS[piece] }} />
                 <span className="roulette-legend__piece">{PIECE_SYMBOLS[piece].white} {pieceName(piece)}</span>
-                <span className="roulette-legend__pct">{pct}%</span>
+                <span className="roulette-legend__pct">{Math.round(pct)}%</span>
               </div>
             ))}
             <div className="roulette-legend__row roulette-legend__row--king">

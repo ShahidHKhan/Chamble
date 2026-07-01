@@ -324,7 +324,7 @@ export function GamePage() {
     if (snapshot.turn !== 'b' || snapshot.status !== 'playing' || isPaused) return
     const timer = setTimeout(() => {
       const chess   = new Chess(snapshot.fen)
-      const rolled  = spinWheel(wheelType)
+      const rolled  = spinWheel(wheelType, chess, 'b')
       const bust    = computeBustInfo(chess, rolled, 'b', chess.isCheck())
       if (!bust.rollHasMoves && !bust.kingHasMoves) { cancelCapture(); return }
       const useType = bust.rollHasMoves ? rolled : 'k'
@@ -824,6 +824,8 @@ export function GamePage() {
               opponentRolled={roulette.opponentRolled}
               isPlayerTurn={isPlayerTurn}
               wheelType={wheelType}
+              fen={snapshot.fen}
+              color={playerColor}
               kingHasMoves={roulette.kingHasMoves}
               onSpin={() => {
                 if (snapshot.status !== 'playing' || isPaused) return
