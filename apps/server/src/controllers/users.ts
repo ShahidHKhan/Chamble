@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import * as Users from '../models/users'
 import { requireAuth } from '../middleware/auth'
+import { validateUsername } from '../lib/validation'
 import type { DataEnvelope, DataListEnvelope, User } from '@chess/shared'
 
 const router = Router()
@@ -39,6 +40,37 @@ router.get('/:id', async (req, res) => {
     res.json(envelope)
   } catch {
     res.status(404).json({ data: null, isSuccess: false, message: 'User not found' })
+  }
+})
+
+router.patch('/:id/username', requireAuth, async (req, res) => {
+  if (req.userId !== req.params.id) {
+    res.status(403).json({ data: null, isSuccess: false, message: 'Forbidden' })
+    return
+  }
+
+  const { username } = req.body as { username: string }
+  if (!username) {
+    res.status(400).json({ data: null, isSuccess: false, message: 'Username is required' })
+    return
+  }
+
+  const usernameError = validateUsername(username)
+  if (usernameError) {
+    res.status(400).json({ data: null, isSuccess: false, message: usernameError })
+    return
+  }
+
+  try {
+    const existing = await Users.getByUsername(username)
+    if (existing && existing.id !== req.params.id) {
+      res.status(400).json({ data: null, isSuccess: false, message: 'Username already taken' })
+      return
+    }
+    const updated = await Users.update(req.params.id as string, { username })
+    res.json({ data: updated, isSuccess: true })
+  } catch {
+    res.status(500).json({ data: null, isSuccess: false, message: 'Failed to update username' })
   }
 })
 
