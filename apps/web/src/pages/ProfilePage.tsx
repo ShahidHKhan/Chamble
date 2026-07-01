@@ -32,12 +32,15 @@ function timeUntilMidnightUTC(): string {
 }
 
 export function ProfilePage() {
-  const { user } = useAuth()
+  const { user, changeUsername } = useAuth()
   const navigate = useNavigate()
   const toast    = useToast()
   const [matches,   setMatches]   = useState<MatchRecord[]>([])
   const [localUser, setLocalUser] = useState<User | null>(null)
   const [claiming,  setClaiming]  = useState(false)
+  const [editingUsername, setEditingUsername] = useState(false)
+  const [usernameDraft,   setUsernameDraft]   = useState('')
+  const [savingUsername,  setSavingUsername]  = useState(false)
 
   useEffect(() => { setLocalUser(user) }, [user])
 
@@ -71,6 +74,31 @@ export function ProfilePage() {
   const total = localUser.wins + localUser.losses + localUser.draws
   const winPct = total > 0 ? Math.round((localUser.wins / total) * 100) : 0
 
+  function startEditingUsername() {
+    setUsernameDraft(localUser!.username)
+    setEditingUsername(true)
+  }
+
+  async function handleSaveUsername() {
+    const next = usernameDraft.trim()
+    if (!next || next === localUser!.username) {
+      setEditingUsername(false)
+      return
+    }
+    setSavingUsername(true)
+    try {
+      const result = await changeUsername(next)
+      if (result.success) {
+        toast('Username updated', 'success')
+        setEditingUsername(false)
+      } else {
+        toast(result.error ?? 'Failed to update username', 'error')
+      }
+    } finally {
+      setSavingUsername(false)
+    }
+  }
+
   return (
     <div className="page">
       <Navbar />
@@ -81,7 +109,29 @@ export function ProfilePage() {
           <div className="profile-avatar">{localUser.displayName.charAt(0)}</div>
           <div className="profile-info">
             <h2 className="profile-name">{localUser.displayName}</h2>
-            <p className="profile-username">@{localUser.username}</p>
+            {editingUsername ? (
+              <div className="profile-username-edit">
+                <input
+                  className="form-input"
+                  value={usernameDraft}
+                  onChange={e => setUsernameDraft(e.target.value)}
+                  disabled={savingUsername}
+                  maxLength={20}
+                  autoFocus
+                />
+                <button className="btn-link" onClick={handleSaveUsername} disabled={savingUsername}>
+                  {savingUsername ? 'Saving…' : 'Save'}
+                </button>
+                <button className="btn-link" onClick={() => setEditingUsername(false)} disabled={savingUsername}>
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <p className="profile-username">
+                @{localUser.username}
+                <button className="btn-link" onClick={startEditingUsername}>Edit</button>
+              </p>
+            )}
             <div className="profile-elo">
               <span className="elo-badge">{localUser.elo}</span>
               <span className="elo-label">ELO</span>

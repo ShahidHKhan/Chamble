@@ -9,6 +9,7 @@ interface AuthContextType {
   register: (username: string, displayName: string, email: string, password: string) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean; email?: string }>
   logout: () => void
   updateElo: (delta: number) => void
+  changeUsername: (username: string) => Promise<{ success: boolean; error?: string }>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -112,8 +113,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const changeUsername = useCallback(async (username: string) => {
+    const userId = userRef.current?.id
+    if (!userId) return { success: false, error: 'Not logged in' }
+
+    try {
+      const res = await api<DataEnvelope<User>>(`users/${userId}/username`, { username }, { method: 'PATCH' })
+      if (!res.isSuccess) return { success: false, error: res.message }
+      setUser(res.data)
+      localStorage.setItem('chamble_user', JSON.stringify(res.data))
+      return { success: true }
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to update username' }
+    }
+  }, [])
+
   return (
-    <AuthContext.Provider value={{ user, ready, login, register, logout, updateElo }}>
+    <AuthContext.Provider value={{ user, ready, login, register, logout, updateElo, changeUsername }}>
       {children}
     </AuthContext.Provider>
   )

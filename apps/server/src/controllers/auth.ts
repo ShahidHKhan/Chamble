@@ -6,6 +6,7 @@ import * as Users from '../models/users'
 import * as ResetTokens from '../models/resetTokens'
 import * as VerifyTokens from '../models/emailVerificationTokens'
 import { sendPasswordResetEmail, sendVerificationEmail } from '../lib/email'
+import { validateUsername, validateDisplayName } from '../lib/validation'
 import { requireAuth } from '../middleware/auth'
 import type { DataEnvelope, User } from '@chess/shared'
 
@@ -43,21 +44,6 @@ const resendVerifyLimiter = rateLimit({
 
 const router = Router()
 
-const RESERVED_USERNAMES = new Set([
-  'admin', 'support', 'moderator', 'mod', 'root', 'chamble',
-  'system', 'help', 'staff', 'official',
-])
-
-function validateUsername(username: string): string | null {
-  if (username.length < 3 || username.length > 20)
-    return 'Username must be between 3 and 20 characters'
-  if (!/^[a-zA-Z0-9_]+$/.test(username))
-    return 'Username can only contain letters, numbers, and underscores'
-  if (RESERVED_USERNAMES.has(username.toLowerCase()))
-    return 'That username is reserved'
-  return null
-}
-
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET
   if (!secret) throw new Error('Missing JWT_SECRET in server .env')
@@ -81,6 +67,12 @@ router.post('/register', registerLimiter, async (req, res) => {
   const usernameError = validateUsername(username)
   if (usernameError) {
     res.status(400).json({ data: null, isSuccess: false, message: usernameError })
+    return
+  }
+
+  const displayNameError = validateDisplayName(displayName)
+  if (displayNameError) {
+    res.status(400).json({ data: null, isSuccess: false, message: displayNameError })
     return
   }
 
